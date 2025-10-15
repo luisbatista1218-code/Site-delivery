@@ -20,6 +20,7 @@ body {margin:0;font-family:sans-serif;background:#1b0033;color:#fff;}
 <body>
 
 <div class="top">
+  <button onclick="goBack()">← Voltar</button>
   <button onclick="openContact()">Contato</button>
   <strong>Delivery</strong>
   <button onclick="openUser()">Usuário/Admin</button>
@@ -41,11 +42,18 @@ body {margin:0;font-family:sans-serif;background:#1b0033;color:#fff;}
 let cart = [];
 let notifications = [];
 let orders = [];
+let currentView = 'home';
 let products = [
   {id:1,categoria:"Pizza",nome:"Pizza Calabresa",descricao:"Pizza com borda de requeijão",preco:30.00,imagem:"pizza-calabresa.jpg"}
 ];
 
 // --- FUNÇÕES PRINCIPAIS ---
+function goBack(){
+  if(currentView === 'categories' || currentView === 'cart' || currentView === 'notifs' || currentView === 'admin'){
+    showHome();
+  }
+}
+
 function openContact(){ 
   alert("WhatsApp: (11) 99999-9999\nEmail: contato@delivery.com"); 
 }
@@ -64,6 +72,7 @@ function openUser(){
 }
 
 function showHome(){
+  currentView = 'home';
   document.getElementById('view').innerHTML = `
     <div class='hero' style='
       background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
@@ -79,6 +88,7 @@ function showHome(){
 }
 
 function showCategories(){
+  currentView = 'categories';
   let html = "<h3>Categoria: Pizza</h3>";
   products.forEach(p => {
     html += `<div class='card'>
@@ -114,6 +124,7 @@ function addToCart(id){
 }
 
 function showCart(){
+  currentView = 'cart';
   let html = '<h3>Seu Carrinho</h3>';
   
   if(cart.length === 0){ 
@@ -177,14 +188,64 @@ function startCheckout(){
     return; 
   }
   
-  let localizacao = prompt('Endereço de entrega:');
-  if(!localizacao) return;
-  
-  let descricao = prompt('Complemento ou ponto de referência:');
-  if(descricao && descricao.length > 30) {
-    descricao = descricao.substring(0, 30);
+  // Tenta pegar localização automática do GPS
+  if(navigator.geolocation){
+    if(confirm('Deseja usar sua localização atual automática?')){
+      navigator.geolocation.getCurrentPosition(
+        function(position){
+          // Sucesso - pegou a localização GPS
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const localizacao = `GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+          
+          let descricao = prompt('Complemento ou ponto de referência:');
+          if(descricao && descricao.length > 30) {
+            descricao = descricao.substring(0, 30);
+          }
+          
+          finalizarPedido(localizacao, descricao);
+        },
+        function(error){
+          // Erro ou usuário negou GPS
+          console.log('Erro GPS:', error);
+          let localizacao = prompt('Localização automática falhou. Digite seu endereço:');
+          if(!localizacao) return;
+          
+          let descricao = prompt('Complemento ou ponto de referência:');
+          if(descricao && descricao.length > 30) {
+            descricao = descricao.substring(0, 30);
+          }
+          
+          finalizarPedido(localizacao, descricao);
+        }
+      );
+    } else {
+      // Usuário não quis GPS - pede endereço manual
+      let localizacao = prompt('Digite seu endereço completo:');
+      if(!localizacao) return;
+      
+      let descricao = prompt('Complemento ou ponto de referência:');
+      if(descricao && descricao.length > 30) {
+        descricao = descricao.substring(0, 30);
+      }
+      
+      finalizarPedido(localizacao, descricao);
+    }
+  } else {
+    // Navegador não suporta geolocalização
+    let localizacao = prompt('Digite seu endereço completo:');
+    if(!localizacao) return;
+    
+    let descricao = prompt('Complemento ou ponto de referência:');
+    if(descricao && descricao.length > 30) {
+      descricao = descricao.substring(0, 30);
+    }
+    
+    finalizarPedido(localizacao, descricao);
   }
-  
+}
+
+function finalizarPedido(localizacao, descricao){
   let codigoPedido = Math.floor(Math.random() * 900 + 100);
   let totalPedido = cart.reduce((total, item) => total + (item.preco * item.qtd), 0);
   
@@ -205,13 +266,14 @@ function startCheckout(){
     data: pedido.data
   });
   
-  alert(`Pedido #${codigoPedido} confirmado!\nTotal: R$ ${totalPedido.toFixed(2)}\nEntrega em: ${localizacao}`);
+  alert(`✅ Pedido #${codigoPedido} confirmado!\n💰 Total: R$ ${totalPedido.toFixed(2)}\n📍 Entrega em: ${localizacao}`);
   
   cart = [];
   showHome();
 }
 
 function showNotifs(){
+  currentView = 'notifs';
   let html = '<h3>Notificações</h3>';
   
   if(notifications.length === 0){ 
@@ -230,6 +292,7 @@ function showNotifs(){
 }
 
 function showAdminOrders(){
+  currentView = 'admin';
   let html = '<h3>Pedidos - Área Administrativa</h3>';
   
   if(orders.length === 0){ 
@@ -277,6 +340,7 @@ window.showAdminOrders = showAdminOrders;
 window.atualizarStatus = atualizarStatus;
 window.openContact = openContact;
 window.openUser = openUser;
+window.goBack = goBack;
 
 showHome();
 </script>
