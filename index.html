@@ -15,6 +15,13 @@ body {margin:0;font-family:sans-serif;background:#1b0033;color:#fff;}
 .card {background:#fff;color:#000;padding:8px;border-radius:8px;margin:8px 0;}
 .card img {width:100%;height:160px;object-fit:cover;border-radius:6px;}
 .card button {cursor:pointer;}
+.loading {color: #fff; text-align: center; padding: 20px;}
+.upload-area {border: 2px dashed #ccc; padding: 20px; text-align: center; margin: 10px 0; border-radius: 8px;}
+.upload-area.active {border-color: #2a0050; background: #f0f0f0;}
+.file-info {background: #e8f4fd; padding: 10px; border-radius: 5px; margin: 10px 0; color: #000;}
+.btn {background: #2a0050; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; margin: 5px;}
+.btn-ghost {background: #fff; color: #2a0050; padding: 10px 15px; border: 1px solid #2a0050; border-radius: 5px; cursor: pointer; margin: 5px;}
+.btn-disabled {background: #ccc; color: #666; cursor: not-allowed;}
 </style>
 </head>
 <body>
@@ -148,8 +155,8 @@ function showCart(){
     html += `
       <div class='card'>
         <h3>Total: R$ ${total.toFixed(2)}</h3>
-        <button onclick='startCheckout()' style='background: #2a0050; color: white; padding: 10px; border: none; border-radius: 5px; margin-right: 10px;'>Finalizar Pedido</button>
-        <button onclick='clearCart()' style='background: #ff4444; color: white; padding: 10px; border: none; border-radius: 5px;'>Limpar Carrinho</button>
+        <button onclick='startCheckout()' class="btn">Finalizar Pedido</button>
+        <button onclick='clearCart()' class="btn-ghost">Limpar Carrinho</button>
       </div>`;
   }
   
@@ -182,6 +189,30 @@ function clearCart(){
   } 
 }
 
+// Função para converter coordenadas em endereço usando OpenStreetMap
+async function getEnderecoFromCoords(lat, lng) {
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=pt-BR`);
+    const data = await response.json();
+    
+    if(data && data.address) {
+      const addr = data.address;
+      // Monta o endereço com os dados disponíveis
+      let enderecoCompleto = '';
+      if(addr.road) enderecoCompleto += addr.road;
+      if(addr.suburb) enderecoCompleto += ', ' + addr.suburb;
+      if(addr.city) enderecoCompleto += ', ' + addr.city;
+      if(addr.state) enderecoCompleto += ' - ' + addr.state;
+      
+      return enderecoCompleto || `Localização: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    }
+    return `Localização: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  } catch (error) {
+    console.error('Erro ao buscar endereço:', error);
+    return `Localização: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  }
+}
+
 function startCheckout(){
   if(cart.length === 0){ 
     alert('Carrinho vazio'); 
@@ -190,25 +221,30 @@ function startCheckout(){
   
   // Tenta pegar localização automática do GPS
   if(navigator.geolocation){
-    if(confirm('Deseja usar sua localização atual automática?')){
+    if(confirm('Deseja usar sua localização atual automática?\n\nO app vai detectar seu endereço completo (rua, bairro, cidade).')){
+      // Mostra loading
+      document.getElementById('view').innerHTML = '<div class="loading">📍 Detectando sua localização...</div>';
+      
       navigator.geolocation.getCurrentPosition(
-        function(position){
+        async function(position){
           // Sucesso - pegou a localização GPS
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
-          const localizacao = `GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
           
-          let descricao = prompt('Complemento ou ponto de referência:');
+          // Converte coordenadas em endereço legível
+          const enderecoCompleto = await getEnderecoFromCoords(lat, lng);
+          
+          let descricao = prompt(`Endereço detectado:\n${enderecoCompleto}\n\nDigite complemento ou ponto de referência:`);
           if(descricao && descricao.length > 30) {
             descricao = descricao.substring(0, 30);
           }
           
-          finalizarPedido(localizacao, descricao);
+          showUploadComprovante(enderecoCompleto, descricao);
         },
         function(error){
           // Erro ou usuário negou GPS
           console.log('Erro GPS:', error);
-          let localizacao = prompt('Localização automática falhou. Digite seu endereço:');
+          let localizacao = prompt('Localização automática falhou. Digite seu endereço completo:');
           if(!localizacao) return;
           
           let descricao = prompt('Complemento ou ponto de referência:');
@@ -216,12 +252,17 @@ function startCheckout(){
             descricao = descricao.substring(0, 30);
           }
           
-          finalizarPedido(localizacao, descricao);
+          showUploadComprovante(localizacao, descricao);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
         }
       );
     } else {
       // Usuário não quis GPS - pede endereço manual
-      let localizacao = prompt('Digite seu endereço completo:');
+      let localizacao = prompt('Digite seu endereço completo (rua, número, bairro, cidade):');
       if(!localizacao) return;
       
       let descricao = prompt('Complemento ou ponto de referência:');
@@ -229,11 +270,11 @@ function startCheckout(){
         descricao = descricao.substring(0, 30);
       }
       
-      finalizarPedido(localizacao, descricao);
+      showUploadComprovante(localizacao, descricao);
     }
   } else {
     // Navegador não suporta geolocalização
-    let localizacao = prompt('Digite seu endereço completo:');
+    let localizacao = prompt('Digite seu endereço completo (rua, número, bairro, cidade):');
     if(!localizacao) return;
     
     let descricao = prompt('Complemento ou ponto de referência:');
@@ -241,35 +282,151 @@ function startCheckout(){
       descricao = descricao.substring(0, 30);
     }
     
-    finalizarPedido(localizacao, descricao);
+    showUploadComprovante(localizacao, descricao);
   }
 }
 
-function finalizarPedido(localizacao, descricao){
-  let codigoPedido = Math.floor(Math.random() * 900 + 100);
-  let totalPedido = cart.reduce((total, item) => total + (item.preco * item.qtd), 0);
+// Tela de upload do comprovante
+function showUploadComprovante(localizacao, descricao) {
+  currentView = 'checkout';
+  let selectedFile = null;
   
-  let pedido = {
-    codigo: codigoPedido,
-    produtos: [...cart],
-    total: totalPedido,
-    local: localizacao,
-    desc: descricao || '',
-    data: new Date().toLocaleString('pt-BR'),
-    status: 'Pedido recebido'
-  };
+  const html = `
+    <div class="card">
+      <h3>📋 Resumo do Pedido</h3>
+      <p><strong>Endereço:</strong> ${localizacao}</p>
+      <p><strong>Complemento:</strong> ${descricao || 'Nenhum'}</p>
+      <p><strong>Total:</strong> R$ ${cart.reduce((total, item) => total + (item.preco * item.qtd), 0).toFixed(2)}</p>
+    </div>
+    
+    <div class="card">
+      <h3>📎 Enviar Comprovante de Pagamento</h3>
+      <p>Envie uma foto ou PDF do comprovante (máximo 2 MB)</p>
+      
+      <div class="upload-area" id="uploadArea">
+        <p>📁 Arraste o arquivo aqui ou clique para selecionar</p>
+        <input type="file" id="fileInput" accept="image/*,.pdf" style="display: none">
+        <button class="btn" onclick="document.getElementById('fileInput').click()">Selecionar Arquivo</button>
+      </div>
+      
+      <div id="fileInfo"></div>
+      
+      <div style="margin-top: 15px;">
+        <button class="btn" id="submitBtn" disabled onclick="finalizarPedidoComComprovante('${localizacao}', '${descricao}')">✅ Finalizar Pedido</button>
+        <button class="btn-ghost" onclick="showCart()">← Voltar</button>
+      </div>
+    </div>
+  `;
   
-  orders.push(pedido);
-  notifications.push({
-    codigo: codigoPedido,
-    msg: `Pedido realizado - R$ ${totalPedido.toFixed(2)}`,
-    data: pedido.data
+  document.getElementById('view').innerHTML = html;
+  
+  const fileInput = document.getElementById('fileInput');
+  const uploadArea = document.getElementById('uploadArea');
+  const fileInfo = document.getElementById('fileInfo');
+  const submitBtn = document.getElementById('submitBtn');
+  
+  // Drag and drop
+  uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('active');
   });
   
-  alert(`✅ Pedido #${codigoPedido} confirmado!\n💰 Total: R$ ${totalPedido.toFixed(2)}\n📍 Entrega em: ${localizacao}`);
+  uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('active');
+  });
   
-  cart = [];
-  showHome();
+  uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('active');
+    if (e.dataTransfer.files.length) {
+      handleFileSelect(e.dataTransfer.files[0]);
+    }
+  });
+  
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) {
+      handleFileSelect(e.target.files[0]);
+    }
+  });
+  
+  function handleFileSelect(file) {
+    // Verifica tamanho (2MB = 2 * 1024 * 1024)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('❌ Arquivo muito grande! Máximo 2 MB permitido.');
+      return;
+    }
+    
+    // Verifica tipo
+    if (!file.type.match('image.*') && !file.type.match('application/pdf')) {
+      alert('❌ Formato não permitido! Apenas imagens ou PDF.');
+      return;
+    }
+    
+    selectedFile = file;
+    
+    // Mostra info do arquivo
+    const fileSize = (file.size / 1024 / 1024).toFixed(2);
+    fileInfo.innerHTML = `
+      <div class="file-info">
+        <strong>📄 ${file.name}</strong><br>
+        Tipo: ${file.type}<br>
+        Tamanho: ${fileSize} MB<br>
+        ✅ Arquivo pronto para envio
+      </div>
+    `;
+    
+    // Ativa botão de enviar
+    submitBtn.disabled = false;
+    submitBtn.classList.remove('btn-disabled');
+  }
+  
+  // Expor a selectedFile globalmente para a função finalizarPedidoComComprovante
+  window.finalizarPedidoComComprovante = function(localizacao, descricao) {
+    if (!selectedFile) {
+      alert('❌ Selecione um arquivo de comprovante primeiro!');
+      return;
+    }
+    
+    // Converte arquivo para Base64
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const comprovanteBase64 = e.target.result;
+      
+      let codigoPedido = Math.floor(Math.random() * 900 + 100);
+      let totalPedido = cart.reduce((total, item) => total + (item.preco * item.qtd), 0);
+      
+      let pedido = {
+        codigo: codigoPedido,
+        produtos: [...cart],
+        total: totalPedido,
+        local: localizacao,
+        desc: descricao || '',
+        comprovante: comprovanteBase64,
+        comprovanteNome: selectedFile.name,
+        comprovanteTipo: selectedFile.type,
+        data: new Date().toLocaleString('pt-BR'),
+        status: 'Pedido recebido - Aguardando confirmação do pagamento'
+      };
+      
+      orders.push(pedido);
+      notifications.push({
+        codigo: codigoPedido,
+        msg: `Pedido realizado - R$ ${totalPedido.toFixed(2)} - Comprovante enviado`,
+        data: pedido.data
+      });
+      
+      alert(`✅ Pedido #${codigoPedido} confirmado!\n💰 Total: R$ ${totalPedido.toFixed(2)}\n📍 Entrega em: ${localizacao}\n📎 Comprovante enviado com sucesso!`);
+      
+      cart = [];
+      showHome();
+    };
+    
+    reader.onerror = function() {
+      alert('❌ Erro ao ler o arquivo. Tente novamente.');
+    };
+    
+    reader.readAsDataURL(selectedFile);
+  };
 }
 
 function showNotifs(){
@@ -299,14 +456,25 @@ function showAdminOrders(){
     html += '<p>Nenhum pedido realizado.</p>';
   } else {
     orders.slice().reverse().forEach(pedido => {
+      const comprovanteHtml = pedido.comprovante ? 
+        `<p><strong>Comprovante:</strong> 
+          <a href="${pedido.comprovante}" target="_blank" download="comprovante_${pedido.codigo}.${pedido.comprovanteType === 'application/pdf' ? 'pdf' : 'jpg'}">
+            📎 Ver Comprovante (${pedido.comprovanteNome})
+          </a>
+        </p>` : 
+        '<p><strong>Comprovante:</strong> ❌ Não enviado</p>';
+      
       html += `<div class='card'>
         <h4>Pedido #${pedido.codigo}</h4>
         <p><strong>Status:</strong> ${pedido.status}</p>
         <p><strong>Data:</strong> ${pedido.data}</p>
         <p><strong>Endereço:</strong> ${pedido.local}</p>
         <p><strong>Total:</strong> R$ ${pedido.total.toFixed(2)}</p>
+        ${comprovanteHtml}
         <p><strong>Itens:</strong> ${pedido.produtos.map(p => `${p.nome} (x${p.qtd})`).join(', ')}</p>
-        <button onclick='atualizarStatus(${pedido.codigo})'>Atualizar Status</button>
+        <button class="btn" onclick='atualizarStatus(${pedido.codigo},"Pagamento confirmado - Preparando pedido")'>✅ Confirmar Pagamento</button>
+        <button class="btn" onclick='atualizarStatus(${pedido.codigo},"Pedido em rota de entrega")'>🚚 Saiu para Entrega</button>
+        <button class="btn" onclick='atualizarStatus(${pedido.codigo},"Pedido entregue")'>🎉 Entregue</button>
       </div>`;
     });
   }
@@ -314,15 +482,19 @@ function showAdminOrders(){
   document.getElementById('view').innerHTML = html;
 }
 
-function atualizarStatus(codigo){
-  let novoStatus = prompt('Novo status do pedido:');
-  if(novoStatus){
-    let pedido = orders.find(o => o.codigo === codigo);
-    if(pedido){
-      pedido.status = novoStatus;
-      alert(`Status do pedido #${codigo} atualizado para: ${novoStatus}`);
-      showAdminOrders();
+function atualizarStatus(codigo, novoStatus){
+  let pedido = orders.find(o => o.codigo === codigo);
+  if(pedido){
+    pedido.status = novoStatus;
+    
+    // Atualiza notificação
+    const notifIndex = notifications.findIndex(n => n.codigo === codigo);
+    if(notifIndex !== -1) {
+      notifications[notifIndex].msg = `Status atualizado: ${novoStatus}`;
     }
+    
+    alert(`✅ Status do pedido #${codigo} atualizado para: ${novoStatus}`);
+    showAdminOrders();
   }
 }
 
