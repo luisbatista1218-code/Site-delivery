@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delivery App Completo</title>
+<style>
+body {margin:0;font-family:sans-serif;background:#1b0033;color:#fff;}
+.top {display:flex;justify-content:space-between;align-items:center;padding:10px;background:#2a0050;}
+.top button {background:#fff;color:#2a0050;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;}
+.main {padding:10px;}
+.hero {width:100%;height:60vh;border-radius:8px;overflow:hidden;background:#300046;display:flex;justify-content:center;align-items:center;font-size:24px;}
+.nav {position:fixed;bottom:0;left:0;right:0;background:#2a0050;padding:8px;display:flex;justify-content:space-around;}
+.nav button {background:#fff;color:#2a0050;border:none;padding:10px 12px;border-radius:8px;cursor:pointer;}
+.card {background:#fff;color:#000;padding:8px;border-radius:8px;margin:8px 0;}
+.card img {width:100%;height:160px;object-fit:cover;border-radius:6px;}
+.card button {cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <button onclick="openContact()">Contato</button>
+  <strong>Delivery</strong>
+  <button onclick="openUser()">Usuário/Admin</button>
+</div>
+
+<div class="main">
+  <div id="view"></div>
+</div>
+
+<div class="nav">
+  <button onclick="showHome()">Início</button>
+  <button onclick="showCategories()">Categoria</button>
+  <button onclick="showCart()">Carrinho</button>
+  <button onclick="showNotifs()">Notificações</button>
+</div>
+
+<script>
+let cart = [];
+let notifications = [];
+let products = [
+  {id:1,categoria:"Pizza",nome:"Pizza Calabresa",descricao:"Pizza com borda de requeijão",preco:30.00,imagem:"images/pizza-calabresa.jpg"}
+];
+
+function openContact(){ alert("Contato disponível nas barras superiores."); }
+
+function openUser(){
+  let tipo = prompt("Digite 'admin' para acessar admin, deixe vazio para usuário:");
+  if(tipo && tipo.toLowerCase()==='admin'){
+    let email = prompt("Email:");
+    let senha = prompt("Senha:");
+    if(email==="admin@local" && senha==="admin123"){ showAdminOrders(); }
+    else alert("Credenciais inválidas");
+  }
+}
+
+function showHome(){
+  document.getElementById('view').innerHTML = "<div class='hero' style='background-image:url(images/pizza-calabresa.jpg);background-size:cover;background-position:center;'>Bem-vindo ao Delivery</div>";
+}
+
+function showCategories(){
+  let html = "<h3>Categoria: Pizza</h3>";
+  products.filter(p=>p.categoria==="Pizza").sort((a,b)=>b.id-a.id).forEach(p=>{
+    html+=`<div class='card'>
+      <img src='${p.imagem}' alt='${p.nome}'/>
+      <h4>${p.nome}</h4>
+      <p>${p.descricao}</p>
+      <div>
+        <button onclick='addToCart(${p.id})'>Adicionar</button>
+        <span style='margin-left:10px'>${p.preco.toFixed(2)} R$</span>
+      </div>
+    </div>`;
+  });
+  document.getElementById('view').innerHTML = html;
+}
+
+function addToCart(id){
+  let p = products.find(x=>x.id===id);
+  let it = cart.find(c=>c.id===id);
+  if(it) it.qtd++;
+  else cart.push({id:p.id,nome:p.nome,preco:p.preco,qtd:1});
+  showCart();
+}
+
+function showCart(){
+  if(cart.length===0){ document.getElementById('view').innerHTML='<p>Carrinho vazio</p>'; return; }
+  let total=0; let html='';
+  cart.forEach(it=>{
+    let sub = it.preco*it.qtd; total+=sub;
+    html+=`<div class='card'>
+      <b>${it.nome}</b>
+      <div>Qtd: <button onclick='dec(${it.id})'>-</button> ${it.qtd} <button onclick='inc(${it.id})'>+</button></div>
+      <div>Subtotal: ${sub.toFixed(2)} R$</div>
+    </div>`;
+  });
+  html+=`<div><b>Total: ${total.toFixed(2)} R$</b></div>
+         <button onclick='startCheckout()'>Enviar Pedido</button>
+         <button onclick='clearCart()'>Limpar Carrinho</button>`;
+  document.getElementById('view').innerHTML=html;
+}
+
+function inc(id){ let it=cart.find(c=>c.id===id); if(it){ it.qtd++; showCart(); } }
+function dec(id){ let it=cart.find(c=>c.id===id); if(it){ it.qtd--; if(it.qtd<=0) cart=cart.filter(x=>x.id!==id); showCart(); } }
+function clearCart(){ if(confirm('Limpar carrinho?')){ cart=[]; showCart(); } }
+
+function startCheckout(){
+  if(cart.length===0){ alert('Carrinho vazio'); return; }
+  let local = prompt('Compartilhe sua localização:');
+  if(!local) return;
+  let desc = prompt('Descrição do local (até 30 caracteres):');
+  if(desc===null) return; if(desc.length>30) desc=desc.substring(0,30);
+  
+  // Criar input para upload do comprovante
+  let fileInput = document.createElement('input');
+  fileInput.type='file';
+  fileInput.accept="image/*,.pdf";
+  
+  let btn = document.createElement('button'); btn.textContent='Enviar Pedido';
+  btn.onclick=function(){
+    if(!fileInput.files.length){ alert('Envie o arquivo do comprovante'); return; }
+    let code=Math.floor(Math.random()*900+100);
+    let pedido={
+      codigo: code,
+      produtos: [...cart],
+      total: cart.reduce((t,c)=>t+c.qtd*c.preco,0),
+      local: local,
+      desc: desc,
+      arquivo: fileInput.files[0],
+      data: new Date().toLocaleString()
+    };
+    notifications.push({codigo:code,msg:`Pedido enviado com ${cart.length} item(s)`,data:pedido.data});
+    alert('Pedido enviado! Código: '+code);
+    cart=[]; showHome();
+  };
+  
+  let view=document.getElementById('view'); view.innerHTML='<h3>Envie seu comprovante (imagem/pdf)</h3>'; view.appendChild(fileInput); view.appendChild(btn);
+}
+
+function showNotifs(){
+  if(notifications.length===0){ document.getElementById('view').innerHTML='<p>Sem notificações.</p>'; return; }
+  let html='<h3>Notificações</h3>';
+  notifications.forEach(n=>{ html+=`<div class='card'><b>Código: ${n.codigo}</b><div>${n.msg}</div><div>${n.data}</div></div>`; });
+  document.getElementById('view').innerHTML=html;
+}
+
+function showAdminOrders(){
+  if(notifications.length===0){ document.getElementById('view').innerHTML='<p>Sem pedidos.</p>'; return; }
+  let html='<h3>Pedidos (Admin)</h3>';
+  notifications.forEach(n=>{
+    html+=`<div class='card'>
+      <b>Código: ${n.codigo}</b>
+      <div>${n.msg}</div>
+      <div>${n.data}</div>
+    </div>`;
+  });
+  document.getElementById('view').innerHTML=html;
+}
+
+showHome();
+</script>
+
+</body>
+</html>
