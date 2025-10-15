@@ -37,38 +37,57 @@ body {margin:0;font-family:sans-serif;background:#1b0033;color:#fff;}
 </div>
 
 <script>
+// --- DADOS GLOBAIS ---
 let cart = [];
 let notifications = [];
+let orders = [];
 let products = [
-  {id:1,categoria:"Pizza",nome:"Pizza Calabresa",descricao:"Pizza com borda de requeijão",preco:30.00,imagem:"images/pizza-calabresa.jpg"}
+  {id:1,categoria:"Pizza",nome:"Pizza Calabresa",descricao:"Pizza com borda de requeijão",preco:30.00,imagem:"pizza-calabresa.jpg"}
 ];
 
-function openContact(){ alert("Contato disponível nas barras superiores."); }
+// --- FUNÇÕES PRINCIPAIS ---
+function openContact(){ 
+  alert("WhatsApp: (11) 99999-9999\nEmail: contato@delivery.com"); 
+}
 
 function openUser(){
   let tipo = prompt("Digite 'admin' para acessar admin, deixe vazio para usuário:");
   if(tipo && tipo.toLowerCase()==='admin'){
     let email = prompt("Email:");
     let senha = prompt("Senha:");
-    if(email==="admin@local" && senha==="admin123"){ showAdminOrders(); }
-    else alert("Credenciais inválidas");
+    if(email==="admin@local" && senha==="admin123"){ 
+      showAdminOrders(); 
+    } else {
+      alert("Credenciais inválidas");
+    }
   }
 }
 
 function showHome(){
-  document.getElementById('view').innerHTML = "<div class='hero' style='background-image:url(images/pizza-calabresa.jpg);background-size:cover;background-position:center;'>Bem-vindo ao Delivery</div>";
+  document.getElementById('view').innerHTML = `
+    <div class='hero' style='
+      background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
+                  url("banner-inicial.jpg");
+      background-size: cover; 
+      background-position: center;
+      color: white;
+      text-align: center;
+    '>
+      <h2>Bem-vindo ao Delivery</h2>
+      <p>Peça suas pizzas favoritas!</p>
+    </div>`;
 }
 
 function showCategories(){
   let html = "<h3>Categoria: Pizza</h3>";
-  products.filter(p=>p.categoria==="Pizza").sort((a,b)=>b.id-a.id).forEach(p=>{
-    html+=`<div class='card'>
-      <img src='${p.imagem}' alt='${p.nome}'/>
+  products.forEach(p => {
+    html += `<div class='card'>
+      <img src='${p.imagem}' alt='${p.nome}' onerror="this.src='https://via.placeholder.com/400x200?text=Imagem+Não+Encontrada'"/>
       <h4>${p.nome}</h4>
       <p>${p.descricao}</p>
       <div>
-        <button onclick='addToCart(${p.id})'>Adicionar</button>
-        <span style='margin-left:10px'>${p.preco.toFixed(2)} R$</span>
+        <button onclick='addToCart(${p.id})'>Adicionar ao Carrinho</button>
+        <span style='margin-left:10px; font-weight:bold'>R$ ${p.preco.toFixed(2)}</span>
       </div>
     </div>`;
   });
@@ -76,89 +95,192 @@ function showCategories(){
 }
 
 function addToCart(id){
-  let p = products.find(x=>x.id===id);
-  let it = cart.find(c=>c.id===id);
-  if(it) it.qtd++;
-  else cart.push({id:p.id,nome:p.nome,preco:p.preco,qtd:1});
+  let p = products.find(x => x.id === id);
+  if (!p) return;
+  
+  let item = cart.find(c => c.id === id);
+  if (item) {
+    item.qtd++;
+  } else {
+    cart.push({
+      id: p.id,
+      nome: p.nome,
+      preco: p.preco,
+      qtd: 1
+    });
+  }
   showCart();
+  alert(`${p.nome} adicionado ao carrinho!`);
 }
 
 function showCart(){
-  if(cart.length===0){ document.getElementById('view').innerHTML='<p>Carrinho vazio</p>'; return; }
-  let total=0; let html='';
-  cart.forEach(it=>{
-    let sub = it.preco*it.qtd; total+=sub;
-    html+=`<div class='card'>
-      <b>${it.nome}</b>
-      <div>Qtd: <button onclick='dec(${it.id})'>-</button> ${it.qtd} <button onclick='inc(${it.id})'>+</button></div>
-      <div>Subtotal: ${sub.toFixed(2)} R$</div>
-    </div>`;
-  });
-  html+=`<div><b>Total: ${total.toFixed(2)} R$</b></div>
-         <button onclick='startCheckout()'>Enviar Pedido</button>
-         <button onclick='clearCart()'>Limpar Carrinho</button>`;
-  document.getElementById('view').innerHTML=html;
+  let html = '<h3>Seu Carrinho</h3>';
+  
+  if(cart.length === 0){ 
+    html += '<p>Carrinho vazio</p>';
+  } else {
+    let total = 0;
+    cart.forEach(item => {
+      let subtotal = item.preco * item.qtd;
+      total += subtotal;
+      html += `<div class='card'>
+        <b>${item.nome}</b>
+        <div>Quantidade: 
+          <button onclick='decQty(${item.id})'>-</button> 
+          ${item.qtd} 
+          <button onclick='incQty(${item.id})'>+</button>
+        </div>
+        <div>Subtotal: R$ ${subtotal.toFixed(2)}</div>
+      </div>`;
+    });
+    
+    html += `
+      <div class='card'>
+        <h3>Total: R$ ${total.toFixed(2)}</h3>
+        <button onclick='startCheckout()' style='background: #2a0050; color: white; padding: 10px; border: none; border-radius: 5px; margin-right: 10px;'>Finalizar Pedido</button>
+        <button onclick='clearCart()' style='background: #ff4444; color: white; padding: 10px; border: none; border-radius: 5px;'>Limpar Carrinho</button>
+      </div>`;
+  }
+  
+  document.getElementById('view').innerHTML = html;
 }
 
-function inc(id){ let it=cart.find(c=>c.id===id); if(it){ it.qtd++; showCart(); } }
-function dec(id){ let it=cart.find(c=>c.id===id); if(it){ it.qtd--; if(it.qtd<=0) cart=cart.filter(x=>x.id!==id); showCart(); } }
-function clearCart(){ if(confirm('Limpar carrinho?')){ cart=[]; showCart(); } }
+function incQty(id){ 
+  let item = cart.find(c => c.id === id); 
+  if(item){ 
+    item.qtd++; 
+    showCart(); 
+  } 
+}
+
+function decQty(id){ 
+  let item = cart.find(c => c.id === id); 
+  if(item){ 
+    item.qtd--; 
+    if(item.qtd <= 0) {
+      cart = cart.filter(x => x.id !== id);
+    }
+    showCart(); 
+  } 
+}
+
+function clearCart(){ 
+  if(confirm('Tem certeza que deseja limpar o carrinho?')){ 
+    cart = []; 
+    showCart(); 
+  } 
+}
 
 function startCheckout(){
-  if(cart.length===0){ alert('Carrinho vazio'); return; }
-  let local = prompt('Compartilhe sua localização:');
-  if(!local) return;
-  let desc = prompt('Descrição do local (até 30 caracteres):');
-  if(desc===null) return; if(desc.length>30) desc=desc.substring(0,30);
+  if(cart.length === 0){ 
+    alert('Carrinho vazio'); 
+    return; 
+  }
   
-  // Criar input para upload do comprovante
-  let fileInput = document.createElement('input');
-  fileInput.type='file';
-  fileInput.accept="image/*,.pdf";
+  let localizacao = prompt('Endereço de entrega:');
+  if(!localizacao) return;
   
-  let btn = document.createElement('button'); btn.textContent='Enviar Pedido';
-  btn.onclick=function(){
-    if(!fileInput.files.length){ alert('Envie o arquivo do comprovante'); return; }
-    let code=Math.floor(Math.random()*900+100);
-    let pedido={
-      codigo: code,
-      produtos: [...cart],
-      total: cart.reduce((t,c)=>t+c.qtd*c.preco,0),
-      local: local,
-      desc: desc,
-      arquivo: fileInput.files[0],
-      data: new Date().toLocaleString()
-    };
-    notifications.push({codigo:code,msg:`Pedido enviado com ${cart.length} item(s)`,data:pedido.data});
-    alert('Pedido enviado! Código: '+code);
-    cart=[]; showHome();
+  let descricao = prompt('Complemento ou ponto de referência:');
+  if(descricao && descricao.length > 30) {
+    descricao = descricao.substring(0, 30);
+  }
+  
+  let codigoPedido = Math.floor(Math.random() * 900 + 100);
+  let totalPedido = cart.reduce((total, item) => total + (item.preco * item.qtd), 0);
+  
+  let pedido = {
+    codigo: codigoPedido,
+    produtos: [...cart],
+    total: totalPedido,
+    local: localizacao,
+    desc: descricao || '',
+    data: new Date().toLocaleString('pt-BR'),
+    status: 'Pedido recebido'
   };
   
-  let view=document.getElementById('view'); view.innerHTML='<h3>Envie seu comprovante (imagem/pdf)</h3>'; view.appendChild(fileInput); view.appendChild(btn);
+  orders.push(pedido);
+  notifications.push({
+    codigo: codigoPedido,
+    msg: `Pedido realizado - R$ ${totalPedido.toFixed(2)}`,
+    data: pedido.data
+  });
+  
+  alert(`Pedido #${codigoPedido} confirmado!\nTotal: R$ ${totalPedido.toFixed(2)}\nEntrega em: ${localizacao}`);
+  
+  cart = [];
+  showHome();
 }
 
 function showNotifs(){
-  if(notifications.length===0){ document.getElementById('view').innerHTML='<p>Sem notificações.</p>'; return; }
-  let html='<h3>Notificações</h3>';
-  notifications.forEach(n=>{ html+=`<div class='card'><b>Código: ${n.codigo}</b><div>${n.msg}</div><div>${n.data}</div></div>`; });
-  document.getElementById('view').innerHTML=html;
+  let html = '<h3>Notificações</h3>';
+  
+  if(notifications.length === 0){ 
+    html += '<p>Nenhuma notificação.</p>';
+  } else {
+    notifications.slice().reverse().forEach(notif => {
+      html += `<div class='card'>
+        <b>Pedido #${notif.codigo}</b>
+        <div>${notif.msg}</div>
+        <small>${notif.data}</small>
+      </div>`;
+    });
+  }
+  
+  document.getElementById('view').innerHTML = html;
 }
 
 function showAdminOrders(){
-  if(notifications.length===0){ document.getElementById('view').innerHTML='<p>Sem pedidos.</p>'; return; }
-  let html='<h3>Pedidos (Admin)</h3>';
-  notifications.forEach(n=>{
-    html+=`<div class='card'>
-      <b>Código: ${n.codigo}</b>
-      <div>${n.msg}</div>
-      <div>${n.data}</div>
-    </div>`;
-  });
-  document.getElementById('view').innerHTML=html;
+  let html = '<h3>Pedidos - Área Administrativa</h3>';
+  
+  if(orders.length === 0){ 
+    html += '<p>Nenhum pedido realizado.</p>';
+  } else {
+    orders.slice().reverse().forEach(pedido => {
+      html += `<div class='card'>
+        <h4>Pedido #${pedido.codigo}</h4>
+        <p><strong>Status:</strong> ${pedido.status}</p>
+        <p><strong>Data:</strong> ${pedido.data}</p>
+        <p><strong>Endereço:</strong> ${pedido.local}</p>
+        <p><strong>Total:</strong> R$ ${pedido.total.toFixed(2)}</p>
+        <p><strong>Itens:</strong> ${pedido.produtos.map(p => `${p.nome} (x${p.qtd})`).join(', ')}</p>
+        <button onclick='atualizarStatus(${pedido.codigo})'>Atualizar Status</button>
+      </div>`;
+    });
+  }
+  
+  document.getElementById('view').innerHTML = html;
 }
+
+function atualizarStatus(codigo){
+  let novoStatus = prompt('Novo status do pedido:');
+  if(novoStatus){
+    let pedido = orders.find(o => o.codigo === codigo);
+    if(pedido){
+      pedido.status = novoStatus;
+      alert(`Status do pedido #${codigo} atualizado para: ${novoStatus}`);
+      showAdminOrders();
+    }
+  }
+}
+
+// --- INICIALIZAÇÃO ---
+window.showHome = showHome;
+window.showCategories = showCategories;
+window.showCart = showCart;
+window.showNotifs = showNotifs;
+window.addToCart = addToCart;
+window.incQty = incQty;
+window.decQty = decQty;
+window.clearCart = clearCart;
+window.startCheckout = startCheckout;
+window.showAdminOrders = showAdminOrders;
+window.atualizarStatus = atualizarStatus;
+window.openContact = openContact;
+window.openUser = openUser;
 
 showHome();
 </script>
 
 </body>
 </html>
+  
