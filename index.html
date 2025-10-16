@@ -24,6 +24,8 @@ body {margin:0;font-family:sans-serif;background:#1b0033;color:#fff;}
 .btn-disabled {background: #ccc; color: #666; cursor: not-allowed;}
 .category-item {padding: 15px; margin: 10px 0; background: #fff; color: #000; border-radius: 8px; cursor: pointer; text-align: center;}
 .pix-info {background: #f0f8f0; padding: 15px; border-radius: 8px; margin: 10px 0; color: #000; border-left: 4px solid #32a852;}
+.notification-badge {background: #ff4444; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center; position: absolute; top: -5px; right: -5px;}
+.notification-btn {position: relative;}
 </style>
 </head>
 <body>
@@ -43,7 +45,10 @@ body {margin:0;font-family:sans-serif;background:#1b0033;color:#fff;}
   <button onclick="showHome()">Início</button>
   <button onclick="showCategories()">Categoria</button>
   <button onclick="showCart()">Carrinho</button>
-  <button onclick="showNotifs()">Notificações</button>
+  <button class="notification-btn" onclick="showNotifs()">
+    Notificações
+    <span id="notificationCounter" class="notification-badge" style="display: none">0</span>
+  </button>
 </div>
 
 <script>
@@ -56,6 +61,9 @@ let categories = ["Pizza", "Bebidas", "Sobremesas"];
 let products = [
   {id:1,categoria:"Pizza",nome:"Pizza Calabresa",descricao:"Pizza com borda de requeijão",preco:30.00,imagem:"pizza-calabresa.jpg"}
 ];
+let unreadNotifications = 0;
+const BOT_TOKEN = '8205702578:AAFw4c3aRUR5oDDhH5WWAdOctM9rPLOIHac';
+const CHAT_ID = '1232955171';
 
 // --- FUNÇÕES PRINCIPAIS ---
 function goBack(){
@@ -80,6 +88,16 @@ function openUser(){
     } else {
       alert("Credenciais inválidas");
     }
+  }
+}
+
+function updateNotificationCounter() {
+  const counter = document.getElementById('notificationCounter');
+  if (unreadNotifications > 0) {
+    counter.style.display = 'flex';
+    counter.textContent = unreadNotifications > 99 ? '99+' : unreadNotifications;
+  } else {
+    counter.style.display = 'none';
   }
 }
 
@@ -211,6 +229,30 @@ function clearCart(){
     cart = []; 
     showCart(); 
   } 
+}
+
+async function sendTelegramNotification(pedido) {
+  const message = `🆕 NOVO PEDIDO RECEBIDO!\n\n📦 Código: #${pedido.codigo}\n💰 Total: R$ ${pedido.total.toFixed(2)}\n📍 Endereço: ${pedido.local}\n📋 Itens: ${pedido.produtos.map(p => `${p.nome} (x${p.qtd})`).join(', ')}\n⏰ Data: ${pedido.data}\n\n🔔 Verifique a área administrativa para mais detalhes.`;
+  
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: CHAT_ID,
+        text: message,
+        parse_mode: 'HTML'
+      })
+    });
+    
+    if (!response.ok) {
+      console.error('Erro ao enviar para Telegram:', await response.text());
+    }
+  } catch (error) {
+    console.error('Erro ao conectar com Telegram:', error);
+  }
 }
 
 async function getEnderecoFromCoords(lat, lng) {
@@ -391,7 +433,7 @@ function showUploadComprovante(localizacaoData, descricao) {
       return;
     }
     
-    if (!file.type.match('image.*') && !file.type.match('application/pdf')) {
+    if (!file.type.match('image.*') && !file.type.match('application.pdf')) {
       alert('❌ Formato não permitido! Apenas imagens ou PDF.');
       return;
     }
@@ -412,14 +454,14 @@ function showUploadComprovante(localizacaoData, descricao) {
     submitBtn.classList.remove('btn-disabled');
   }
   
-  window.finalizarPedidoComComprovante = function(localizacao, descricao, mapaUrl) {
+  window.finalizarPedidoComComprovante = async function(localizacao, descricao, mapaUrl) {
     if (!selectedFile) {
       alert('❌ Selecione um arquivo de comprovante primeiro!');
       return;
     }
     
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
       const comprovanteBase64 = e.target.result;
       
       let codigoPedido = Math.floor(Math.random() * 900 + 100);
@@ -446,7 +488,12 @@ function showUploadComprovante(localizacaoData, descricao) {
         data: pedido.data
       });
       
-      alert(`✅ Pedido #${codigoPedido} confirmado!\n💰 Total: R$ ${totalPedido.toFixed(2)}\n📍 Entrega em: ${localizacao}\n📎 Comprovante enviado com sucesso!`);
+      unreadNotifications++;
+      updateNotificationCounter();
+      
+      await sendTelegramNotification(pedido);
+      
+      alert(`✅ Pedido #${codigoPedido} confirmado!\n💰 Total: R$ ${totalPedido.toFixed(2)}\n📍 Entrega em: ${localizacao}\n📎 Comprovante enviado com sucesso!\n\n📢 Notificação enviada para o administrador!`);
       
       cart = [];
       showHome();
@@ -462,6 +509,9 @@ function showUploadComprovante(localizacaoData, descricao) {
 
 function showNotifs(){
   currentView = 'notifs';
+  unreadNotifications = 0;
+  updateNotificationCounter();
+  
   let html = '<h3>Notificações</h3>';
   
   if(notifications.length === 0){ 
@@ -555,4 +605,3 @@ showHome();
 
 </body>
 </html>
-  
