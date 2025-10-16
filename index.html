@@ -9,11 +9,11 @@ body {margin:0;font-family:sans-serif;background:#1b0033;color:#fff;}
 .top {display:flex;justify-content:space-between;align-items:center;padding:10px;background:#2a0050;}
 .top button {background:#fff;color:#2a0050;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;}
 .main {padding:10px;}
-.hero {width:100%;height:60vh;border-radius:8px;overflow:hidden;background:#300046;display:flex;justify-content:center;align-items:center;font-size:24px;}
+.hero {width:100%;height:60vh;border-radius:8px;overflow:hidden;background:#300046;display:flex;justify-content:center;align-items:center;font-size:24px;background:url('banner-inicial.jpg') center/cover no-repeat;}
 .nav {position:fixed;bottom:0;left:0;right:0;background:#2a0050;padding:8px;display:flex;justify-content:space-around;}
 .nav button {background:#fff;color:#2a0050;border:none;padding:10px 12px;border-radius:8px;cursor:pointer;}
 .card {background:#fff;color:#000;padding:8px;border-radius:8px;margin:8px 0;}
-.card img {width:100%;height:440px;object-fit:contain;border-radius:6px;}
+.card img {width:664px;height:440px;object-fit:contain;border-radius:6px;display:block;margin:0 auto;max-width:100%;}
 .card button {cursor:pointer;}
 .loading {color: #fff; text-align: center; padding: 20px;}
 .upload-area {border: 2px dashed #ccc; padding: 20px; text-align: center; margin: 10px 0; border-radius: 8px;}
@@ -196,8 +196,10 @@ function showHome(){
   currentView = 'home';
   document.getElementById('view').innerHTML = `
     <div class='hero'>
-      <h2>Bem-vindo ao Delivery</h2>
-      <p>Peça suas pizzas favoritas!</p>
+      <div style="background: rgba(0,0,0,0.7); padding: 20px; border-radius: 10px; text-align: center;">
+        <h2>Bem-vindo ao Delivery</h2>
+        <p>Peça suas pizzas favoritas!</p>
+      </div>
     </div>`;
 }
 
@@ -675,3 +677,4 @@ showHome();
 
 </body>
 </html>
+        
