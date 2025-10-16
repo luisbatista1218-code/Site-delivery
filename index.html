@@ -26,6 +26,12 @@ body {margin:0;font-family:sans-serif;background:#1b0033;color:#fff;}
 .pix-info {background: #f0f8f0; padding: 15px; border-radius: 8px; margin: 10px 0; color: #000; border-left: 4px solid #32a852;}
 .notification-badge {background: #ff4444; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center; position: absolute; top: -5px; right: -5px;}
 .notification-btn {position: relative;}
+.notification-alert {background: #ff4444 !important; color: white !important; animation: pulse 1.5s infinite;}
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
 </style>
 </head>
 <body>
@@ -45,25 +51,117 @@ body {margin:0;font-family:sans-serif;background:#1b0033;color:#fff;}
   <button onclick="showHome()">Início</button>
   <button onclick="showCategories()">Categoria</button>
   <button onclick="showCart()">Carrinho</button>
-  <button class="notification-btn" onclick="showNotifs()">
+  <button id="notifBtn" class="notification-btn" onclick="showNotifs()">
     Notificações
     <span id="notificationCounter" class="notification-badge" style="display: none">0</span>
   </button>
 </div>
 
 <script>
+// --- CONFIGURAÇÕES ---
+const BOT_TOKEN = '8205702578:AAFw4c3aRUR5oDDhH5WWAdOctM9rPLOIHac';
+const CHAT_ID = '1232955171';
+const STORAGE_KEY = 'delivery_app_data';
+const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 horas
+
 // --- DADOS GLOBAIS ---
 let cart = [];
 let notifications = [];
 let orders = [];
 let currentView = 'home';
+let unreadNotifications = 0;
 let categories = ["Pizza", "Bebidas", "Sobremesas"];
 let products = [
   {id:1,categoria:"Pizza",nome:"Pizza Calabresa",descricao:"Pizza com borda de requeijão",preco:30.00,imagem:"pizza-calabresa.jpg"}
 ];
-let unreadNotifications = 0;
-const BOT_TOKEN = '8205702578:AAFw4c3aRUR5oDDhH5WWAdOctM9rPLOIHac';
-const CHAT_ID = '1232955171';
+
+// --- LOCALSTORAGE ---
+function loadFromStorage() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const data = JSON.parse(stored);
+      const now = Date.now();
+      
+      // Verifica se os dados ainda são válidos (24 horas)
+      if (now - data.timestamp < SESSION_DURATION) {
+        cart = data.cart || [];
+        notifications = data.notifications || [];
+        orders = data.orders || [];
+        unreadNotifications = data.unreadNotifications || 0;
+        updateNotificationCounter();
+      } else {
+        // Sessão expirada, limpa dados
+        clearStorage();
+      }
+    }
+  } catch (e) {
+    console.error('Erro ao carregar dados:', e);
+    clearStorage();
+  }
+}
+
+function saveToStorage() {
+  const data = {
+    cart: cart,
+    notifications: notifications,
+    orders: orders,
+    unreadNotifications: unreadNotifications,
+    timestamp: Date.now()
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function clearStorage() {
+  cart = [];
+  notifications = [];
+  orders = [];
+  unreadNotifications = 0;
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+// --- NOTIFICAÇÕES ---
+function updateNotificationCounter() {
+  const counter = document.getElementById('notificationCounter');
+  const notifBtn = document.getElementById('notifBtn');
+  
+  if (unreadNotifications > 0) {
+    counter.style.display = 'flex';
+    counter.textContent = unreadNotifications > 99 ? '99+' : unreadNotifications;
+    notifBtn.classList.add('notification-alert');
+  } else {
+    counter.style.display = 'none';
+    notifBtn.classList.remove('notification-alert');
+  }
+  saveToStorage();
+}
+
+// --- TELEGRAM BOT ---
+async function sendTelegramNotification(pedido) {
+  const message = `🆕 *NOVO PEDIDO RECEBIDO!*\n\n📦 *Código:* #${pedido.codigo}\n💰 *Total:* R$ ${pedido.total.toFixed(2)}\n📍 *Endereço:* ${pedido.local}\n📋 *Itens:* ${pedido.produtos.map(p => `${p.nome} (x${p.qtd})`).join(', ')}\n⏰ *Data:* ${pedido.data}\n\n🔔 _Verifique a área administrativa para mais detalhes._`;
+  
+  try {
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: CHAT_ID,
+        text: message,
+        parse_mode: 'Markdown'
+      })
+    });
+    
+    const result = await response.json();
+    if (!result.ok) {
+      console.error('Erro Telegram:', result);
+    }
+  } catch (error) {
+    console.error('Erro ao conectar com Telegram:', error);
+  }
+}
 
 // --- FUNÇÕES PRINCIPAIS ---
 function goBack(){
@@ -75,7 +173,7 @@ function goBack(){
 }
 
 function openContact(){ 
-  alert("WhatsApp: (11) 99999-9999\nEmail: contato@delivery.com"); 
+  alert("WhatsApp: (11) 99999-9999\nEmail: contato@delivery.com\nChave PIX: 123.456.789-00"); 
 }
 
 function openUser(){
@@ -88,16 +186,6 @@ function openUser(){
     } else {
       alert("Credenciais inválidas");
     }
-  }
-}
-
-function updateNotificationCounter() {
-  const counter = document.getElementById('notificationCounter');
-  if (unreadNotifications > 0) {
-    counter.style.display = 'flex';
-    counter.textContent = unreadNotifications > 99 ? '99+' : unreadNotifications;
-  } else {
-    counter.style.display = 'none';
   }
 }
 
@@ -168,6 +256,7 @@ function addToCart(id){
       qtd: 1
     });
   }
+  saveToStorage();
   showCart();
   alert(`${p.nome} adicionado ao carrinho!`);
 }
@@ -209,6 +298,7 @@ function incQty(id){
   let item = cart.find(c => c.id === id); 
   if(item){ 
     item.qtd++; 
+    saveToStorage();
     showCart(); 
   } 
 }
@@ -220,6 +310,7 @@ function decQty(id){
     if(item.qtd <= 0) {
       cart = cart.filter(x => x.id !== id);
     }
+    saveToStorage();
     showCart(); 
   } 
 }
@@ -227,32 +318,9 @@ function decQty(id){
 function clearCart(){ 
   if(confirm('Tem certeza que deseja limpar o carrinho?')){ 
     cart = []; 
+    saveToStorage();
     showCart(); 
   } 
-}
-
-async function sendTelegramNotification(pedido) {
-  const message = `🆕 NOVO PEDIDO RECEBIDO!\n\n📦 Código: #${pedido.codigo}\n💰 Total: R$ ${pedido.total.toFixed(2)}\n📍 Endereço: ${pedido.local}\n📋 Itens: ${pedido.produtos.map(p => `${p.nome} (x${p.qtd})`).join(', ')}\n⏰ Data: ${pedido.data}\n\n🔔 Verifique a área administrativa para mais detalhes.`;
-  
-  try {
-    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: CHAT_ID,
-        text: message,
-        parse_mode: 'HTML'
-      })
-    });
-    
-    if (!response.ok) {
-      console.error('Erro ao enviar para Telegram:', await response.text());
-    }
-  } catch (error) {
-    console.error('Erro ao conectar com Telegram:', error);
-  }
 }
 
 async function getEnderecoFromCoords(lat, lng) {
@@ -490,12 +558,14 @@ function showUploadComprovante(localizacaoData, descricao) {
       
       unreadNotifications++;
       updateNotificationCounter();
+      saveToStorage();
       
       await sendTelegramNotification(pedido);
       
       alert(`✅ Pedido #${codigoPedido} confirmado!\n💰 Total: R$ ${totalPedido.toFixed(2)}\n📍 Entrega em: ${localizacao}\n📎 Comprovante enviado com sucesso!\n\n📢 Notificação enviada para o administrador!`);
       
       cart = [];
+      saveToStorage();
       showHome();
     };
     
@@ -511,6 +581,7 @@ function showNotifs(){
   currentView = 'notifs';
   unreadNotifications = 0;
   updateNotificationCounter();
+  saveToStorage();
   
   let html = '<h3>Notificações</h3>';
   
@@ -578,6 +649,7 @@ function atualizarStatus(codigo, novoStatus){
       notifications[notifIndex].msg = `Status atualizado: ${novoStatus}`;
     }
     
+    saveToStorage();
     alert(`✅ Status do pedido #${codigo} atualizado para: ${novoStatus}`);
     showAdminOrders();
   }
@@ -600,6 +672,8 @@ window.openContact = openContact;
 window.openUser = openUser;
 window.goBack = goBack;
 
+// Carrega dados ao iniciar
+loadFromStorage();
 showHome();
 </script>
 
