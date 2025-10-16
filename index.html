@@ -62,7 +62,7 @@ body {margin:0;font-family:sans-serif;background:#1b0033;color:#fff;}
 const BOT_TOKEN = '8205702578:AAFw4c3aRUR5oDDhH5WWAdOctM9rPLOIHac';
 const CHAT_ID = '1232955171';
 const STORAGE_KEY = 'delivery_app_data';
-const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 horas
+const SESSION_DURATION = 24 * 60 * 60 * 1000;
 
 // --- DADOS GLOBAIS ---
 let cart = [];
@@ -83,7 +83,6 @@ function loadFromStorage() {
       const data = JSON.parse(stored);
       const now = Date.now();
       
-      // Verifica se os dados ainda são válidos (24 horas)
       if (now - data.timestamp < SESSION_DURATION) {
         cart = data.cart || [];
         notifications = data.notifications || [];
@@ -91,7 +90,6 @@ function loadFromStorage() {
         unreadNotifications = data.unreadNotifications || 0;
         updateNotificationCounter();
       } else {
-        // Sessão expirada, limpa dados
         clearStorage();
       }
     }
@@ -134,6 +132,11 @@ function updateNotificationCounter() {
     notifBtn.classList.remove('notification-alert');
   }
   saveToStorage();
+}
+
+function addNotification() {
+  unreadNotifications++;
+  updateNotificationCounter();
 }
 
 // --- TELEGRAM BOT ---
@@ -556,8 +559,7 @@ function showUploadComprovante(localizacaoData, descricao) {
         data: pedido.data
       });
       
-      unreadNotifications++;
-      updateNotificationCounter();
+      addNotification();
       saveToStorage();
       
       await sendTelegramNotification(pedido);
@@ -649,6 +651,7 @@ function atualizarStatus(codigo, novoStatus){
       notifications[notifIndex].msg = `Status atualizado: ${novoStatus}`;
     }
     
+    addNotification();
     saveToStorage();
     alert(`✅ Status do pedido #${codigo} atualizado para: ${novoStatus}`);
     showAdminOrders();
