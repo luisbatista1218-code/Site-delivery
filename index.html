@@ -41,7 +41,10 @@ body {margin:0;font-family:sans-serif;background:#1b0033;color:#fff;}
   <button onclick="goBack()">← Voltar</button>
   <button onclick="openContact()">Contato</button>
   <strong>Delivery</strong>
-  <button onclick="openUser()">Usuário/Admin</button>
+  <button id="userNotifBtn" class="notification-btn" onclick="openUser()">
+    Usuário/Admin
+    <span id="userNotificationCounter" class="notification-badge" style="display: none">0</span>
+  </button>
 </div>
 
 <div class="main">
@@ -68,9 +71,11 @@ const SESSION_DURATION = 24 * 60 * 60 * 1000;
 // --- DADOS GLOBAIS ---
 let cart = [];
 let notifications = [];
+let userNotifications = [];
 let orders = [];
 let currentView = 'home';
 let unreadNotifications = 0;
+let unreadUserNotifications = 0;
 let categories = ["Pizza", "Bebidas", "Sobremesas"];
 let products = [
   {id:1,categoria:"Pizza",nome:"Pizza Calabresa",descricao:"Pizza com borda de requeijão",preco:30.00,imagem:"pizza-calabresa.jpg"}
@@ -87,9 +92,12 @@ function loadFromStorage() {
       if (now - data.timestamp < SESSION_DURATION) {
         cart = data.cart || [];
         notifications = data.notifications || [];
+        userNotifications = data.userNotifications || [];
         orders = data.orders || [];
         unreadNotifications = data.unreadNotifications || 0;
+        unreadUserNotifications = data.unreadUserNotifications || 0;
         updateNotificationCounter();
+        updateUserNotificationCounter();
       } else {
         clearStorage();
       }
@@ -104,8 +112,10 @@ function saveToStorage() {
   const data = {
     cart: cart,
     notifications: notifications,
+    userNotifications: userNotifications,
     orders: orders,
     unreadNotifications: unreadNotifications,
+    unreadUserNotifications: unreadUserNotifications,
     timestamp: Date.now()
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -114,8 +124,10 @@ function saveToStorage() {
 function clearStorage() {
   cart = [];
   notifications = [];
+  userNotifications = [];
   orders = [];
   unreadNotifications = 0;
+  unreadUserNotifications = 0;
   localStorage.removeItem(STORAGE_KEY);
 }
 
@@ -135,14 +147,34 @@ function updateNotificationCounter() {
   saveToStorage();
 }
 
+function updateUserNotificationCounter() {
+  const counter = document.getElementById('userNotificationCounter');
+  const notifBtn = document.getElementById('userNotifBtn');
+  
+  if (unreadUserNotifications > 0) {
+    counter.style.display = 'flex';
+    counter.textContent = unreadUserNotifications > 99 ? '99+' : unreadUserNotifications;
+    notifBtn.classList.add('notification-alert');
+  } else {
+    counter.style.display = 'none';
+    notifBtn.classList.remove('notification-alert');
+  }
+  saveToStorage();
+}
+
 function addNotification() {
   unreadNotifications++;
   updateNotificationCounter();
 }
 
+function addUserNotification() {
+  unreadUserNotifications++;
+  updateUserNotificationCounter();
+}
+
 // --- TELEGRAM BOT ---
 async function sendTelegramNotification(pedido) {
-  const message = `🆕 *NOVO PEDIDO RECEBIDO!*\n\n📦 *Código:* #${pedido.codigo}\n💰 *Total:* R$ ${pedido.total.toFixed(2)}\n📍 *Endereço:* ${pedido.local}\n📧 *Email:* ${pedido.email}\n📋 *Itens:* ${pedido.produtos.map(p => `${p.nome} (x${p.qtd})`).join(', ')}\n⏰ *Data:* ${pedido.data}\n\n🔔 _Verifique a área administrativa para mais detalhes._`;
+  const message = `🆕 *NOVO PEDIDO RECEBIDO!*\n\n📦 *Código:* #${pedido.codigo}\n💰 *Total:* R$ ${pedido.total.toFixed(2)}\n📍 *Endereço:* ${pedido.local}\n📱 *WhatsApp:* ${pedido.whatsapp}\n📋 *Itens:* ${pedido.produtos.map(p => `${p.nome} (x${p.qtd})`).join(', ')}\n⏰ *Data:* ${pedido.data}\n\n🔔 _Verifique a área administrativa para mais detalhes._`;
   
   try {
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
@@ -167,24 +199,16 @@ async function sendTelegramNotification(pedido) {
   }
 }
 
-// --- ENVIO DE EMAIL (Simulado) ---
-async function sendEmailUpdate(pedido, status) {
-  // Simulação de envio de email - em produção usar serviço como EmailJS, SendGrid, etc.
-  console.log(`📧 Email enviado para: ${pedido.email}`);
-  console.log(`📦 Assunto: Atualização do Pedido #${pedido.codigo}`);
-  console.log(`📝 Mensagem: Seu pedido foi atualizado para: ${status}`);
+// --- ENVIO DE WHATSAPP (Simulado) ---
+async function sendWhatsAppUpdate(pedido, status) {
+  // Simulação de envio de WhatsApp
+  console.log(`📱 MENSAGEM WHATSAPP ENVIADA PARA O CLIENTE:`);
+  console.log(`Para: ${pedido.whatsapp}`);
+  console.log(`Mensagem: Seu pedido #${pedido.codigo} foi atualizado para: ${status}`);
+  console.log('---');
   
-  // Aqui você integraria com um serviço real de email
-  // Exemplo com EmailJS:
-  /*
-  emailjs.send('service_id', 'template_id', {
-    to_email: pedido.email,
-    codigo: pedido.codigo,
-    status: status,
-    total: pedido.total,
-    itens: pedido.produtos.map(p => `${p.nome} (x${p.qtd})`).join(', ')
-  });
-  */
+  // Em produção, integrar com API de WhatsApp como Twilio, etc.
+  await new Promise(resolve => setTimeout(resolve, 1000));
 }
 
 // --- FUNÇÕES PRINCIPAIS ---
@@ -210,6 +234,9 @@ function openUser(){
     } else {
       alert("Credenciais inválidas");
     }
+  } else {
+    // Usuário normal - mostra notificações do usuário
+    showUserNotifications();
   }
 }
 
@@ -351,7 +378,6 @@ async function getEnderecoFromCoords(lat, lng) {
       const addr = data.address;
       let enderecoCompleto = '';
       
-      // Monta endereço de forma mais legível
       if(addr.house_number) enderecoCompleto += addr.house_number + ', ';
       if(addr.road) enderecoCompleto += addr.road;
       if(addr.neighbourhood) enderecoCompleto += ', ' + addr.neighbourhood;
@@ -426,7 +452,7 @@ function showDadosEntrega(localizacaoData) {
       ` : ''}
       
       <form id="dadosForm">
-        <input type="email" class="input-field" id="email" placeholder="Seu email (para receber atualizações)" required>
+        <input type="tel" class="input-field" id="whatsapp" placeholder="Seu WhatsApp (com DDD)" required>
         <input type="text" class="input-field" id="endereco" placeholder="Endereço completo" value="${localizacaoData.endereco || ''}" required>
         <input type="text" class="input-field" id="complemento" placeholder="Complemento ou ponto de referência" maxlength="30">
         <input type="hidden" id="mapaUrl" value="${localizacaoData.mapaUrl || ''}">
@@ -444,26 +470,26 @@ function showDadosEntrega(localizacaoData) {
   document.getElementById('dadosForm').onsubmit = function(e) {
     e.preventDefault();
     
-    const email = document.getElementById('email').value;
+    const whatsapp = document.getElementById('whatsapp').value;
     const endereco = document.getElementById('endereco').value;
     const complemento = document.getElementById('complemento').value;
     const mapaUrl = document.getElementById('mapaUrl').value;
     
-    if (!email || !endereco) {
+    if (!whatsapp || !endereco) {
       alert('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
     
-    // Validação simples de email
-    if (!email.includes('@') || !email.includes('.')) {
-      alert('Por favor, insira um email válido.');
+    // Validação simples de WhatsApp
+    if (whatsapp.replace(/\D/g, '').length < 10) {
+      alert('Por favor, insira um WhatsApp válido com DDD.');
       return;
     }
     
     showUploadComprovante({
       endereco: endereco,
       mapaUrl: mapaUrl,
-      email: email
+      whatsapp: whatsapp
     }, complemento);
   };
 }
@@ -480,7 +506,7 @@ function showUploadComprovante(localizacaoData, descricao) {
   const html = `
     <div class="card">
       <h3>📋 Resumo do Pedido</h3>
-      <p><strong>📧 Email:</strong> ${localizacaoData.email}</p>
+      <p><strong>📱 WhatsApp:</strong> ${localizacaoData.whatsapp}</p>
       <p><strong>📍 Endereço:</strong> ${localizacaoData.endereco}</p>
       ${mapaHtml}
       <p><strong>📝 Complemento:</strong> ${descricao || 'Nenhum'}</p>
@@ -508,7 +534,7 @@ function showUploadComprovante(localizacaoData, descricao) {
       <div id="fileInfo"></div>
       
       <div style="margin-top: 15px;">
-        <button class="btn" id="submitBtn" disabled onclick="finalizarPedidoComComprovante('${localizacaoData.endereco.replace(/'/g, "\\'")}', '${(descricao || '').replace(/'/g, "\\'")}', '${localizacaoData.mapaUrl.replace(/'/g, "\\'")}', '${localizacaoData.email.replace(/'/g, "\\'")}')">✅ Finalizar Pedido</button>
+        <button class="btn" id="submitBtn" disabled onclick="finalizarPedidoComComprovante('${localizacaoData.endereco.replace(/'/g, "\\'")}', '${(descricao || '').replace(/'/g, "\\'")}', '${localizacaoData.mapaUrl.replace(/'/g, "\\'")}', '${localizacaoData.whatsapp.replace(/'/g, "\\'")}')">✅ Finalizar Pedido</button>
         <button class="btn-ghost" onclick="showDadosEntrega({endereco: '${localizacaoData.endereco.replace(/'/g, "\\'")}', mapaUrl: '${localizacaoData.mapaUrl.replace(/'/g, "\\'")}'})">← Voltar</button>
       </div>
     </div>
@@ -571,7 +597,7 @@ function showUploadComprovante(localizacaoData, descricao) {
     submitBtn.classList.remove('btn-disabled');
   }
   
-  window.finalizarPedidoComComprovante = async function(localizacao, descricao, mapaUrl, email) {
+  window.finalizarPedidoComComprovante = async function(localizacao, descricao, mapaUrl, whatsapp) {
     if (!selectedFile) {
       alert('❌ Selecione um arquivo de comprovante primeiro!');
       return;
@@ -591,7 +617,7 @@ function showUploadComprovante(localizacaoData, descricao) {
         local: localizacao,
         mapaUrl: mapaUrl,
         desc: descricao || '',
-        email: email,
+        whatsapp: whatsapp,
         comprovante: comprovanteBase64,
         comprovanteNome: selectedFile.name,
         comprovanteTipo: selectedFile.type,
@@ -606,13 +632,24 @@ function showUploadComprovante(localizacaoData, descricao) {
         data: pedido.data
       });
       
+      // NOTIFICAÇÃO PARA O USUÁRIO
+      userNotifications.push({
+        codigo: codigoPedido,
+        msg: `✅ Pedido #${codigoPedido} confirmado! Aguardando confirmação do pagamento`,
+        data: pedido.data
+      });
+      
       addNotification();
+      addUserNotification();
       saveToStorage();
       
+      // Envia para Telegram
       await sendTelegramNotification(pedido);
-      await sendEmailUpdate(pedido, 'Pedido recebido');
       
-      alert(`✅ Pedido #${codigoPedido} confirmado!\n📧 Email de confirmação enviado para: ${email}\n💰 Total: R$ ${totalPedido.toFixed(2)}\n📍 Entrega em: ${localizacao}\n📎 Comprovante enviado com sucesso!\n\n📢 Notificação enviada para o administrador!`);
+      // Envia confirmação por WhatsApp para o cliente
+      await sendWhatsAppUpdate(pedido, 'Pedido recebido com sucesso!');
+      
+      alert(`✅ Pedido #${pedido.codigo} confirmado!\n📱 Mensagem enviada para: ${whatsapp}\n💰 Total: R$ ${totalPedido.toFixed(2)}\n📍 Entrega em: ${localizacao}\n\n📢 Notificação enviada para o administrador!`);
       
       cart = [];
       saveToStorage();
@@ -633,12 +670,35 @@ function showNotifs(){
   updateNotificationCounter();
   saveToStorage();
   
-  let html = '<h3>Notificações</h3>';
+  let html = '<h3>Notificações do Sistema</h3>';
   
   if(notifications.length === 0){ 
     html += '<p>Nenhuma notificação.</p>';
   } else {
     notifications.slice().reverse().forEach(notif => {
+      html += `<div class='card'>
+        <b>Pedido #${notif.codigo}</b>
+        <div>${notif.msg}</div>
+        <small>${notif.data}</small>
+      </div>`;
+    });
+  }
+  
+  document.getElementById('view').innerHTML = html;
+}
+
+function showUserNotifications(){
+  currentView = 'user-notifs';
+  unreadUserNotifications = 0;
+  updateUserNotificationCounter();
+  saveToStorage();
+  
+  let html = '<h3>Suas Notificações</h3>';
+  
+  if(userNotifications.length === 0){ 
+    html += '<p>Nenhuma notificação.</p>';
+  } else {
+    userNotifications.slice().reverse().forEach(notif => {
       html += `<div class='card'>
         <b>Pedido #${notif.codigo}</b>
         <div>${notif.msg}</div>
@@ -672,7 +732,7 @@ function showAdminOrders(){
       
       html += `<div class='card'>
         <h4>Pedido #${pedido.codigo}</h4>
-        <p><strong>📧 Email:</strong> ${pedido.email}</p>
+        <p><strong>📱 WhatsApp:</strong> ${pedido.whatsapp}</p>
         <p><strong>Status:</strong> ${pedido.status}</p>
         <p><strong>Data:</strong> ${pedido.data}</p>
         <p><strong>Endereço:</strong> ${pedido.local}</p>
@@ -693,20 +753,30 @@ function showAdminOrders(){
 async function atualizarStatus(codigo, novoStatus){
   let pedido = orders.find(o => o.codigo === codigo);
   if(pedido){
+    const statusAnterior = pedido.status;
     pedido.status = novoStatus;
     
+    // Atualiza notificações do sistema
     const notifIndex = notifications.findIndex(n => n.codigo === codigo);
     if(notifIndex !== -1) {
       notifications[notifIndex].msg = `Status atualizado: ${novoStatus}`;
     }
     
+    // ADICIONA NOTIFICAÇÃO PARA O USUÁRIO
+    userNotifications.push({
+      codigo: codigo,
+      msg: `🔄 Pedido #${codigo} atualizado: ${novoStatus}`,
+      data: new Date().toLocaleString('pt-BR')
+    });
+    
     addNotification();
+    addUserNotification();
     saveToStorage();
     
-    // Envia email de atualização para o cliente
-    await sendEmailUpdate(pedido, novoStatus);
+    // Envia atualização por WhatsApp para o cliente
+    await sendWhatsAppUpdate(pedido, novoStatus);
     
-    alert(`✅ Status do pedido #${codigo} atualizado para: ${novoStatus}\n📧 Email de atualização enviado para o cliente.`);
+    alert(`✅ Status do pedido #${codigo} atualizado para: ${novoStatus}\n📱 Mensagem enviada para o cliente: ${pedido.whatsapp}`);
     showAdminOrders();
   }
 }
@@ -717,6 +787,7 @@ window.showCategories = showCategories;
 window.showCategoryProducts = showCategoryProducts;
 window.showCart = showCart;
 window.showNotifs = showNotifs;
+window.showUserNotifications = showUserNotifications;
 window.addToCart = addToCart;
 window.incQty = incQty;
 window.decQty = decQty;
