@@ -70,6 +70,7 @@
 const BOT_TOKEN = '8205702578:AAFw4c3aRUR5oDDhH5WWAdOctM9rPLOIHac';
 const CHAT_ID = '1232955171';
 const STORAGE_KEY = 'delivery_app_data';
+const ADMIN_STORAGE_KEY = 'delivery_app_admin_data';
 const SESSION_DURATION = 24 * 60 * 60 * 1000;
 
 let cart = [];
@@ -87,21 +88,33 @@ let products = [
 function loadFromStorage() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
+    const adminStored = localStorage.getItem(ADMIN_STORAGE_KEY);
+    
     if (stored) {
       const data = JSON.parse(stored);
       const now = Date.now();
       
       if (now - data.timestamp < SESSION_DURATION) {
         cart = data.cart || [];
-        notifications = data.notifications || [];
         userNotifications = data.userNotifications || [];
-        orders = data.orders || [];
-        unreadNotifications = data.unreadNotifications || 0;
         unreadUserNotifications = data.unreadUserNotifications || 0;
-        updateNotificationCounter();
         updateUserNotificationCounter();
       } else {
-        clearStorage();
+        clearUserStorage();
+      }
+    }
+    
+    if (adminStored) {
+      const adminData = JSON.parse(adminStored);
+      const now = Date.now();
+      
+      if (now - adminData.timestamp < SESSION_DURATION) {
+        orders = adminData.orders || [];
+        notifications = adminData.notifications || [];
+        unreadNotifications = adminData.unreadNotifications || 0;
+        updateNotificationCounter();
+      } else {
+        clearAdminStorage();
       }
     }
   } catch (e) {
@@ -111,16 +124,22 @@ function loadFromStorage() {
 }
 
 function saveToStorage() {
-  const data = {
+  const userData = {
     cart: cart,
-    notifications: notifications,
     userNotifications: userNotifications,
-    orders: orders,
-    unreadNotifications: unreadNotifications,
     unreadUserNotifications: unreadUserNotifications,
     timestamp: Date.now()
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  
+  const adminData = {
+    orders: orders,
+    notifications: notifications,
+    unreadNotifications: unreadNotifications,
+    timestamp: Date.now()
+  };
+  
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+  localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(adminData));
 }
 
 function clearStorage() {
@@ -131,6 +150,21 @@ function clearStorage() {
   unreadNotifications = 0;
   unreadUserNotifications = 0;
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(ADMIN_STORAGE_KEY);
+}
+
+function clearUserStorage() {
+  cart = [];
+  userNotifications = [];
+  unreadUserNotifications = 0;
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+function clearAdminStorage() {
+  orders = [];
+  notifications = [];
+  unreadNotifications = 0;
+  localStorage.removeItem(ADMIN_STORAGE_KEY);
 }
 
 function updateNotificationCounter() {
