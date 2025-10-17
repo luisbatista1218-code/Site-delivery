@@ -369,34 +369,45 @@ function clearCart(){
 
 async function getEnderecoFromCoords(lat, lng) {
   try {
-    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format: 'json'&lat=${lat}&lon=${lng}&accept-language=pt-BR`);
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=pt-BR`);
     const data = await response.json();
     
     if(data && data.address) {
       const addr = data.address;
+      
       let enderecoCompleto = '';
       
       if(addr.house_number) enderecoCompleto += addr.house_number + ', ';
       if(addr.road) enderecoCompleto += addr.road;
-      if(addr.neighbourhood) enderecoCompleto += ', ' + addr.neighbourhood;
+      if(addr.neighbourhood) enderecoCompleto += ', Bairro: ' + addr.neighbourhood;
       if(addr.suburb && addr.suburb !== addr.neighbourhood) enderecoCompleto += ', ' + addr.suburb;
-      if(addr.city) enderecoCompleto += ', ' + addr.city;
-      if(addr.state) enderecoCompleto += ' - ' + addr.state;
+      if(addr.city) enderecoCompleto += ', Cidade: ' + addr.city;
+      if(addr.state) enderecoCompleto += ' - Estado: ' + addr.state;
+      if(addr.postcode) enderecoCompleto += ', CEP: ' + addr.postcode;
       
       return {
         endereco: enderecoCompleto || `Localização: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-        mapaUrl: `https://maps.google.com/?q=${lat},${lng}`
+        mapaUrl: `https://maps.google.com/?q=${lat},${lng}`,
+        bairro: addr.neighbourhood || addr.suburb || '',
+        cidade: addr.city || addr.town || addr.village || '',
+        estado: addr.state || ''
       };
     }
     return {
       endereco: `Localização: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-      mapaUrl: `https://maps.google.com/?q=${lat},${lng}`
+      mapaUrl: `https://maps.google.com/?q=${lat},${lng}`,
+      bairro: '',
+      cidade: '',
+      estado: ''
     };
   } catch (error) {
     console.error('Erro ao buscar endereço:', error);
     return {
       endereco: `Localização: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-      mapaUrl: `https://maps.google.com/?q=${lat},${lng}`
+      mapaUrl: `https://maps.google.com/?q=${lat},${lng}`,
+      bairro: '',
+      cidade: '',
+      estado: ''
     };
   }
 }
@@ -421,7 +432,7 @@ function startCheckout(){
         },
         function(error){
           console.log('Erro GPS:', error);
-          showDadosEntrega({endereco: '', mapaUrl: ''});
+          showDadosEntrega({endereco: '', mapaUrl: '', bairro: '', cidade: '', estado: ''});
         },
         {
           enableHighAccuracy: true,
@@ -430,10 +441,10 @@ function startCheckout(){
         }
       );
     } else {
-      showDadosEntrega({endereco: '', mapaUrl: ''});
+      showDadosEntrega({endereco: '', mapaUrl: '', bairro: '', cidade: '', estado: ''});
     }
   } else {
-    showDadosEntrega({endereco: '', mapaUrl: ''});
+    showDadosEntrega({endereco: '', mapaUrl: '', bairro: '', cidade: '', estado: ''});
   }
 }
 
@@ -452,6 +463,9 @@ function showDadosEntrega(localizacaoData) {
       <form id="dadosForm">
         <input type="tel" class="input-field" id="whatsapp" placeholder="Seu Telefone (com DDD)" required>
         <input type="text" class="input-field" id="endereco" placeholder="Endereço completo" value="${localizacaoData.endereco || ''}" required>
+        <input type="text" class="input-field" id="bairro" placeholder="Bairro" value="${localizacaoData.bairro || ''}" required>
+        <input type="text" class="input-field" id="cidade" placeholder="Cidade" value="${localizacaoData.cidade || ''}" required>
+        <input type="text" class="input-field" id="estado" placeholder="Estado" value="${localizacaoData.estado || ''}" required>
         <input type="text" class="input-field" id="complemento" placeholder="Complemento ou ponto de referência" maxlength="30">
         <input type="hidden" id="mapaUrl" value="${localizacaoData.mapaUrl || ''}">
         
@@ -470,10 +484,13 @@ function showDadosEntrega(localizacaoData) {
     
     const whatsapp = document.getElementById('whatsapp').value;
     const endereco = document.getElementById('endereco').value;
+    const bairro = document.getElementById('bairro').value;
+    const cidade = document.getElementById('cidade').value;
+    const estado = document.getElementById('estado').value;
     const complemento = document.getElementById('complemento').value;
     const mapaUrl = document.getElementById('mapaUrl').value;
     
-    if (!whatsapp || !endereco) {
+    if (!whatsapp || !endereco || !bairro || !cidade || !estado) {
       alert('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
@@ -483,10 +500,15 @@ function showDadosEntrega(localizacaoData) {
       return;
     }
     
+    const enderecoCompleto = `${endereco}, ${bairro}, ${cidade} - ${estado}${complemento ? ', ' + complemento : ''}`;
+    
     showUploadComprovante({
-      endereco: endereco,
+      endereco: enderecoCompleto,
       mapaUrl: mapaUrl,
-      whatsapp: whatsapp
+      whatsapp: whatsapp,
+      bairro: bairro,
+      cidade: cidade,
+      estado: estado
     }, complemento);
   };
 }
@@ -532,7 +554,7 @@ function showUploadComprovante(localizacaoData, descricao) {
       
       <div style="margin-top: 15px;">
         <button class="btn" id="submitBtn" disabled onclick="finalizarPedidoComComprovante('${localizacaoData.endereco.replace(/'/g, "\\'")}', '${(descricao || '').replace(/'/g, "\\'")}', '${localizacaoData.mapaUrl.replace(/'/g, "\\'")}', '${localizacaoData.whatsapp.replace(/'/g, "\\'")}')">✅ Finalizar Pedido</button>
-        <button class="btn-ghost" onclick="showDadosEntrega({endereco: '${localizacaoData.endereco.replace(/'/g, "\\'")}', mapaUrl: '${localizacaoData.mapaUrl.replace(/'/g, "\\'")}'})">← Voltar</button>
+        <button class="btn-ghost" onclick="showDadosEntrega({endereco: '${localizacaoData.endereco.replace(/'/g, "\\'")}', mapaUrl: '${localizacaoData.mapaUrl.replace(/'/g, "\\'")}', bairro: '${localizacaoData.bairro.replace(/'/g, "\\'")}', cidade: '${localizacaoData.cidade.replace(/'/g, "\\'")}', estado: '${localizacaoData.estado.replace(/'/g, "\\'")}'})">← Voltar</button>
       </div>
     </div>
   `;
