@@ -1,38 +1,44 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Delivery App Completo</title>
 <style>
-body {margin:0;font-family:sans-serif;background:#1b0033;color:#fff;}
-.top {display:flex;justify-content:space-between;align-items:center;padding:10px;background:#2a0050;}
-.top button {background:#fff;color:#2a0050;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;}
-.main {padding:10px;}
-.hero {width:100%;height:60vh;border-radius:8px;overflow:hidden;display:flex;justify-content:center;align-items:center;font-size:24px;background:url('banner-inicial.jpg') center/cover no-repeat;}
-.nav {position:fixed;bottom:0;left:0;right:0;background:#2a0050;padding:8px;display:flex;justify-content:space-around;}
-.nav button {background:#fff;color:#2a0050;border:none;padding:10px 12px;border-radius:8px;cursor:pointer;}
-.card {background:#fff;color:#000;padding:8px;border-radius:8px;margin:8px 0;}
-.card img {width:100%;height:160px;object-fit:cover;border-radius:6px;}
-.card button {cursor:pointer;}
-.loading {color: #fff; text-align: center; padding: 20px;}
-.upload-area {border: 2px dashed #ccc; padding: 20px; text-align: center; margin: 10px 0; border-radius: 8px;}
-.upload-area.active {border-color: #2a0050; background: #f0f0f0;}
-.file-info {background: #e8f4fd; padding: 10px; border-radius: 5px; margin: 10px 0; color: #000;}
-.btn {background: #2a0050; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; margin: 5px;}
-.btn-ghost {background: #fff; color: #2a0050; padding: 10px 15px; border: 1px solid #2a0050; border-radius: 5px; cursor: pointer; margin: 5px;}
-.btn-disabled {background: #ccc; color: #666; cursor: not-allowed;}
-.category-item {padding: 15px; margin: 10px 0; background: #fff; color: #000; border-radius: 8px; cursor: pointer; text-align: center;}
-.pix-info {background: #f0f8f0; padding: 15px; border-radius: 8px; margin: 10px 0; color: #000; border-left: 4px solid #32a852;}
-.notification-badge {background: #ff4444; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center; position: absolute; top: -5px; right: -5px;}
-.notification-btn {position: relative;}
-.notification-alert {background: #ff4444 !important; color: white !important; animation: pulse 1.5s infinite;}
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-}
-.input-field {width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:5px;box-sizing:border-box;}
+  /* Estilo atualizado - somente interface/cor */
+  body {margin:0;font-family:'Segoe UI',sans-serif;background:#1c0035;color:#fff;}
+  .top {display:flex;justify-content:space-between;align-items:center;padding:12px;background:#3a0060;}
+  .top button {background:#fff;color:#3a0060;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;}
+  .main {padding:12px;}
+  .hero {width:100%;height:60vh;border-radius:10px;overflow:hidden;display:flex;justify-content:center;align-items:center;font-size:26px;background:url('banner-inicial.jpg') center/cover no-repeat;}
+  .hero div {background: rgba(0,0,0,0.6); padding:25px; border-radius:12px; text-align:center;}
+  .nav {position:fixed;bottom:0;left:0;right:0;background:#3a0060;padding:10px;display:flex;justify-content:space-around;}
+  .nav button {background:#fff;color:#3a0060;border:none;padding:12px 14px;border-radius:10px;cursor:pointer;font-weight:bold;}
+  .card {background:#fff;color:#000;padding:12px;border-radius:10px;margin:10px 0;box-shadow:0 4px 6px rgba(0,0,0,0.2);}
+  .card img {width:100%;height:180px;object-fit:cover;border-radius:8px;}
+  .card button {cursor:pointer;}
+  .loading {color: #fff; text-align: center; padding: 25px; font-size:18px;}
+  .upload-area {border: 2px dashed #ccc; padding: 25px; text-align: center; margin: 12px 0; border-radius: 10px; transition:0.3s;}
+  .upload-area.active {border-color: #3a0060; background: #f9f9f9;}
+  .file-info {background: #e8f4fd; padding: 12px; border-radius: 6px; margin: 12px 0; color: #000; box-shadow:0 2px 4px rgba(0,0,0,0.1);}
+  .btn {background: #3a0060; color: white; padding: 12px 18px; border: none; border-radius: 6px; cursor: pointer; margin: 5px; font-weight:bold; transition:0.2s;}
+  .btn:hover {background: #5a0080;}
+  .btn-ghost {background: #fff; color: #3a0060; padding: 12px 18px; border: 1px solid #3a0060; border-radius: 6px; cursor: pointer; margin: 5px; font-weight:bold; transition:0.2s;}
+  .btn-ghost:hover {background: #f3f3f3;}
+  .btn-disabled {background: #ccc; color: #666; cursor: not-allowed;}
+  .category-item {padding: 18px; margin: 12px 0; background: #fff; color: #000; border-radius: 10px; cursor: pointer; text-align: center; font-weight:bold; transition:0.2s; box-shadow:0 2px 4px rgba(0,0,0,0.1);}
+  .category-item:hover {background: #f3f3f3;}
+  .pix-info {background: #e6fff0; padding: 18px; border-radius: 10px; margin: 12px 0; color: #000; border-left: 5px solid #32a852; box-shadow:0 2px 4px rgba(0,0,0,0.1);}
+  .notification-badge {background: #ff4444; color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content: center; position: absolute; top: -6px; right: -6px; font-weight:bold;}
+  .notification-btn {position: relative;}
+  .notification-alert {background: #ff4444 !important; color: white !important; animation: pulse 1.5s infinite;}
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
+  .input-field {width:100%;padding:12px;margin:10px 0;border:1px solid #ddd;border-radius:6px;box-sizing:border-box;font-size:16px;}
+  a {color: #3a0060; font-weight:bold;}
 </style>
 </head>
 <body>
@@ -174,7 +180,7 @@ function addUserNotification() {
 
 // --- TELEGRAM BOT ---
 async function sendTelegramNotification(pedido) {
-  const message = `🆕 *NOVO PEDIDO RECEBIDO!*\n\n📦 *Código:* #${pedido.codigo}\n💰 *Total:* R$ ${pedido.total.toFixed(2)}\n📍 *Endereço:* ${pedido.local}\n📱 *WhatsApp:* ${pedido.whatsapp}\n📋 *Itens:* ${pedido.produtos.map(p => `${p.nome} (x${p.qtd})`).join(', ')}\n⏰ *Data:* ${pedido.data}\n\n🔔 _Verifique a área administrativa para mais detalhes._`;
+  const message = `🆕 *NOVO PEDIDO RECEBIDO!*\n\n📦 *Código:* #${pedido.codigo}\n💰 *Total:* R$ ${pedido.total.toFixed(2)}\n📍 *Endereço:* ${pedido.local}\n📱 *Telefone:* ${pedido.whatsapp}\n📋 *Itens:* ${pedido.produtos.map(p => `${p.nome} (x${p.qtd})`).join(', ')}\n⏰ *Data:* ${pedido.data}\n\n🔔 _Verifique a área administrativa para mais detalhes._`;
   
   try {
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
@@ -199,21 +205,26 @@ async function sendTelegramNotification(pedido) {
   }
 }
 
+// --- ENVIO DE EMAIL (Simulado) ---
+async function sendEmailUpdate(pedido, status) {
+  // Simulação de envio de email - em produção usar serviço real
+  console.log(`📧 Email (simulado) para: ${pedido.email || 'sem-email'}`);
+  console.log(`Assunto: Atualização do Pedido #${pedido.codigo}`);
+  console.log(`Mensagem: Seu pedido foi atualizado para: ${status}`);
+  // Em produção, integrar com EmailJS/SendGrid/Nodemailer etc.
+}
+
 // --- ENVIO DE WHATSAPP (Simulado) ---
 async function sendWhatsAppUpdate(pedido, status) {
-  // Simulação de envio de WhatsApp
-  console.log(`📱 MENSAGEM WHATSAPP ENVIADA PARA O CLIENTE:`);
-  console.log(`Para: ${pedido.whatsapp}`);
-  console.log(`Mensagem: Seu pedido #${pedido.codigo} foi atualizado para: ${status}`);
-  console.log('---');
-  
-  // Em produção, integrar com API de WhatsApp como Twilio, etc.
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // Simulação de envio de WhatsApp (mantive nome da função/variáveis para não alterar lógica)
+  console.log(`📱 MENSAGEM (simulada) enviada para: ${pedido.whatsapp}`);
+  console.log(`Mensagem: Pedido #${pedido.codigo} - ${status}`);
+  await new Promise(resolve => setTimeout(resolve, 800));
 }
 
 // --- FUNÇÕES PRINCIPAIS ---
 function goBack(){
-  if(currentView === 'categories' || currentView === 'category-products' || currentView === 'cart' || currentView === 'notifs' || currentView === 'admin'){
+  if(currentView === 'categories' || currentView === 'category-products' || currentView === 'cart' || currentView === 'notifs' || currentView === 'admin' || currentView === 'user-notifs'){
     showHome();
   } else if(currentView === 'product-list'){
     showCategories();
@@ -221,7 +232,7 @@ function goBack(){
 }
 
 function openContact(){ 
-  alert("WhatsApp: (11) 99999-9999\nEmail: contato@delivery.com\nChave PIX: 123.456.789-00"); 
+  alert("Telefone: (11) 99999-9999\nEmail: contato@delivery.com\nChave PIX: 123.456.789-00"); 
 }
 
 function openUser(){
@@ -235,7 +246,6 @@ function openUser(){
       alert("Credenciais inválidas");
     }
   } else {
-    // Usuário normal - mostra notificações do usuário
     showUserNotifications();
   }
 }
@@ -244,9 +254,9 @@ function showHome(){
   currentView = 'home';
   document.getElementById('view').innerHTML = `
     <div class='hero'>
-      <div style="background: rgba(0,0,0,0.7); padding: 20px; border-radius: 10px; text-align: center;">
-        <h2>Bem-vindo ao Delivery</h2>
-        <p>Peça suas pizzas favoritas!</p>
+      <div>
+        <h2 style="margin:0 0 8px 0">Bem-vindo ao Delivery</h2>
+        <p style="margin:0">Peça suas pizzas favoritas!</p>
       </div>
     </div>`;
 }
@@ -256,7 +266,7 @@ function showCategories(){
   let html = "<h3>Categorias</h3>";
   categories.forEach(category => {
     html += `<div class='category-item' onclick='showCategoryProducts("${category}")'>
-      <h4>${category}</h4>
+      <h4 style="margin:0">${category}</h4>
     </div>`;
   });
   document.getElementById('view').innerHTML = html;
@@ -273,10 +283,10 @@ function showCategoryProducts(categoryName){
     categoryProducts.forEach(p => {
       html += `<div class='card'>
         <img src='${p.imagem}' alt='${p.nome}' onerror="this.src='https://via.placeholder.com/400x200?text=Imagem+Não+Encontrada'"/>
-        <h4>${p.nome}</h4>
-        <p>${p.descricao}</p>
-        <div>
-          <button onclick='addToCart(${p.id})'>Adicionar ao Carrinho</button>
+        <h4 style="margin:8px 0 6px 0">${p.nome}</h4>
+        <p style="margin:0 0 8px 0">${p.descricao}</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <button class="btn" onclick='addToCart(${p.id})'>Adicionar ao Carrinho</button>
           <span style='margin-left:10px; font-weight:bold'>R$ ${p.preco.toFixed(2)}</span>
         </div>
       </div>`;
@@ -320,10 +330,10 @@ function showCart(){
       total += subtotal;
       html += `<div class='card'>
         <b>${item.nome}</b>
-        <div>Quantidade: 
-          <button onclick='decQty(${item.id})'>-</button> 
-          ${item.qtd} 
-          <button onclick='incQty(${item.id})'>+</button>
+        <div style="margin:8px 0">Quantidade: 
+          <button class="btn-ghost" onclick='decQty(${item.id})'>-</button> 
+          <span style="margin:0 10px">${item.qtd}</span> 
+          <button class="btn" onclick='incQty(${item.id})'>+</button>
         </div>
         <div>Subtotal: R$ ${subtotal.toFixed(2)}</div>
       </div>`;
@@ -378,6 +388,7 @@ async function getEnderecoFromCoords(lat, lng) {
       const addr = data.address;
       let enderecoCompleto = '';
       
+      // Monta endereço de forma mais legível
       if(addr.house_number) enderecoCompleto += addr.house_number + ', ';
       if(addr.road) enderecoCompleto += addr.road;
       if(addr.neighbourhood) enderecoCompleto += ', ' + addr.neighbourhood;
@@ -447,12 +458,12 @@ function showDadosEntrega(localizacaoData) {
       <h3>📋 Dados de Entrega</h3>
       ${localizacaoData.endereco ? `
         <p><strong>📍 Endereço detectado:</strong></p>
-        <p style="background:#f0f8ff;padding:10px;border-radius:5px;">${localizacaoData.endereco}</p>
+        <p style="background:#f0f8ff;padding:10px;border-radius:5px;color:#000">${localizacaoData.endereco}</p>
         <p><small>Se o endereço estiver incorreto, edite abaixo:</small></p>
       ` : ''}
       
       <form id="dadosForm">
-        <input type="tel" class="input-field" id="whatsapp" placeholder="Seu WhatsApp (com DDD)" required>
+        <input type="tel" class="input-field" id="whatsapp" placeholder="Seu Telefone (com DDD)" required>
         <input type="text" class="input-field" id="endereco" placeholder="Endereço completo" value="${localizacaoData.endereco || ''}" required>
         <input type="text" class="input-field" id="complemento" placeholder="Complemento ou ponto de referência" maxlength="30">
         <input type="hidden" id="mapaUrl" value="${localizacaoData.mapaUrl || ''}">
@@ -480,9 +491,9 @@ function showDadosEntrega(localizacaoData) {
       return;
     }
     
-    // Validação simples de WhatsApp
+    // Validação simples de telefone
     if (whatsapp.replace(/\D/g, '').length < 10) {
-      alert('Por favor, insira um WhatsApp válido com DDD.');
+      alert('Por favor, insira um telefone válido com DDD.');
       return;
     }
     
@@ -506,7 +517,7 @@ function showUploadComprovante(localizacaoData, descricao) {
   const html = `
     <div class="card">
       <h3>📋 Resumo do Pedido</h3>
-      <p><strong>📱 WhatsApp:</strong> ${localizacaoData.whatsapp}</p>
+      <p><strong>📱 Telefone:</strong> ${localizacaoData.whatsapp}</p>
       <p><strong>📍 Endereço:</strong> ${localizacaoData.endereco}</p>
       ${mapaHtml}
       <p><strong>📝 Complemento:</strong> ${descricao || 'Nenhum'}</p>
@@ -643,11 +654,14 @@ function showUploadComprovante(localizacaoData, descricao) {
       addUserNotification();
       saveToStorage();
       
-      // Envia para Telegram
+      // Envia para Telegram (bot)
       await sendTelegramNotification(pedido);
       
-      // Envia confirmação por WhatsApp para o cliente
+      // Envia confirmação por "WhatsApp" (simulado) — função mantida para lógica; UI mostra "Telefone"
       await sendWhatsAppUpdate(pedido, 'Pedido recebido com sucesso!');
+      
+      // Simulação de envio de email (console). Se tiver email, pode-se adicionar campo email e usar sendEmailUpdate.
+      await sendEmailUpdate(pedido, 'Pedido recebido');
       
       alert(`✅ Pedido #${pedido.codigo} confirmado!\n📱 Mensagem enviada para: ${whatsapp}\n💰 Total: R$ ${totalPedido.toFixed(2)}\n📍 Entrega em: ${localizacao}\n\n📢 Notificação enviada para o administrador!`);
       
@@ -732,7 +746,7 @@ function showAdminOrders(){
       
       html += `<div class='card'>
         <h4>Pedido #${pedido.codigo}</h4>
-        <p><strong>📱 WhatsApp:</strong> ${pedido.whatsapp}</p>
+        <p><strong>📱 Telefone:</strong> ${pedido.whatsapp}</p>
         <p><strong>Status:</strong> ${pedido.status}</p>
         <p><strong>Data:</strong> ${pedido.data}</p>
         <p><strong>Endereço:</strong> ${pedido.local}</p>
@@ -760,6 +774,8 @@ async function atualizarStatus(codigo, novoStatus){
     const notifIndex = notifications.findIndex(n => n.codigo === codigo);
     if(notifIndex !== -1) {
       notifications[notifIndex].msg = `Status atualizado: ${novoStatus}`;
+    } else {
+      notifications.push({codigo: codigo, msg: `Status atualizado: ${novoStatus}`, data: new Date().toLocaleString('pt-BR')});
     }
     
     // ADICIONA NOTIFICAÇÃO PARA O USUÁRIO
@@ -773,8 +789,11 @@ async function atualizarStatus(codigo, novoStatus){
     addUserNotification();
     saveToStorage();
     
-    // Envia atualização por WhatsApp para o cliente
+    // Envia atualização por WhatsApp para o cliente (simulado)
     await sendWhatsAppUpdate(pedido, novoStatus);
+    
+    // Envia email de atualização (simulado)
+    await sendEmailUpdate(pedido, novoStatus);
     
     alert(`✅ Status do pedido #${codigo} atualizado para: ${novoStatus}\n📱 Mensagem enviada para o cliente: ${pedido.whatsapp}`);
     showAdminOrders();
