@@ -167,32 +167,24 @@ async function sendTelegramNotification(pedido) {
   }
 }
 
-// --- ENVIO DE EMAIL PARA O CLIENTE ---
-async function sendEmailToClient(pedido, assunto, mensagem) {
-  // Simulação de envio de email - em produção integrar com EmailJS, SendGrid, etc.
-  console.log(`📧 EMAIL ENVIADO PARA O CLIENTE:`);
-  console.log(`Para: ${pedido.email}`);
-  console.log(`Assunto: ${assunto}`);
-  console.log(`Mensagem: ${mensagem}`);
-  console.log('---');
+// --- ENVIO DE EMAIL (Simulado) ---
+async function sendEmailUpdate(pedido, status) {
+  // Simulação de envio de email - em produção usar serviço como EmailJS, SendGrid, etc.
+  console.log(`📧 Email enviado para: ${pedido.email}`);
+  console.log(`📦 Assunto: Atualização do Pedido #${pedido.codigo}`);
+  console.log(`📝 Mensagem: Seu pedido foi atualizado para: ${status}`);
   
-  // Exemplo de integração real (descomente e configure):
+  // Aqui você integraria com um serviço real de email
+  // Exemplo com EmailJS:
   /*
-  // Com EmailJS (https://www.emailjs.com/)
-  emailjs.send('seu_service_id', 'seu_template_id', {
+  emailjs.send('service_id', 'template_id', {
     to_email: pedido.email,
-    subject: assunto,
-    message: mensagem,
     codigo: pedido.codigo,
-    status: pedido.status,
-    total: pedido.total.toFixed(2),
-    itens: pedido.produtos.map(p => `${p.nome} (x${p.qtd})`).join(', '),
-    endereco: pedido.local
+    status: status,
+    total: pedido.total,
+    itens: pedido.produtos.map(p => `${p.nome} (x${p.qtd})`).join(', ')
   });
   */
-  
-  // Simula delay de envio
-  await new Promise(resolve => setTimeout(resolve, 1000));
 }
 
 // --- FUNÇÕES PRINCIPAIS ---
@@ -359,6 +351,7 @@ async function getEnderecoFromCoords(lat, lng) {
       const addr = data.address;
       let enderecoCompleto = '';
       
+      // Monta endereço de forma mais legível
       if(addr.house_number) enderecoCompleto += addr.house_number + ', ';
       if(addr.road) enderecoCompleto += addr.road;
       if(addr.neighbourhood) enderecoCompleto += ', ' + addr.neighbourhood;
@@ -433,7 +426,7 @@ function showDadosEntrega(localizacaoData) {
       ` : ''}
       
       <form id="dadosForm">
-        <input type="email" class="input-field" id="email" placeholder="Seu email (para receber atualizações do pedido)" required>
+        <input type="email" class="input-field" id="email" placeholder="Seu email (para receber atualizações)" required>
         <input type="text" class="input-field" id="endereco" placeholder="Endereço completo" value="${localizacaoData.endereco || ''}" required>
         <input type="text" class="input-field" id="complemento" placeholder="Complemento ou ponto de referência" maxlength="30">
         <input type="hidden" id="mapaUrl" value="${localizacaoData.mapaUrl || ''}">
@@ -461,6 +454,7 @@ function showDadosEntrega(localizacaoData) {
       return;
     }
     
+    // Validação simples de email
     if (!email.includes('@') || !email.includes('.')) {
       alert('Por favor, insira um email válido.');
       return;
@@ -615,36 +609,10 @@ function showUploadComprovante(localizacaoData, descricao) {
       addNotification();
       saveToStorage();
       
-      // Envia confirmação para o Telegram
       await sendTelegramNotification(pedido);
+      await sendEmailUpdate(pedido, 'Pedido recebido');
       
-      // ENVIA EMAIL DE CONFIRMAÇÃO PARA O CLIENTE
-      const assuntoCliente = `✅ Confirmação do Pedido #${pedido.codigo} - Delivery Express`;
-      const mensagemCliente = `
-Olá!
-
-Seu pedido foi recebido com sucesso!
-
-📦 **Detalhes do Pedido:**
-- Código: #${pedido.codigo}
-- Total: R$ ${pedido.total.toFixed(2)}
-- Itens: ${pedido.produtos.map(p => `${p.nome} (x${p.qtd})`).join(', ')}
-- Endereço: ${pedido.local}
-- Status: ${pedido.status}
-
-⏰ **Próximos passos:**
-1. Estamos analisando seu comprovante
-2. Você receberá um email quando o pagamento for confirmado
-3. Acompanhe as atualizações do seu pedido
-
-Agradecemos pela preferência! 🍕
-
-Delivery Express
-      `;
-      
-      await sendEmailToClient(pedido, assuntoCliente, mensagemCliente);
-      
-      alert(`✅ Pedido #${pedido.codigo} confirmado!\n📧 Email de confirmação enviado para: ${email}\n💰 Total: R$ ${totalPedido.toFixed(2)}\n📍 Entrega em: ${localizacao}\n\n📢 Notificação enviada para o administrador!`);
+      alert(`✅ Pedido #${codigoPedido} confirmado!\n📧 Email de confirmação enviado para: ${email}\n💰 Total: R$ ${totalPedido.toFixed(2)}\n📍 Entrega em: ${localizacao}\n📎 Comprovante enviado com sucesso!\n\n📢 Notificação enviada para o administrador!`);
       
       cart = [];
       saveToStorage();
@@ -704,7 +672,7 @@ function showAdminOrders(){
       
       html += `<div class='card'>
         <h4>Pedido #${pedido.codigo}</h4>
-        <p><strong>📧 Email do Cliente:</strong> ${pedido.email}</p>
+        <p><strong>📧 Email:</strong> ${pedido.email}</p>
         <p><strong>Status:</strong> ${pedido.status}</p>
         <p><strong>Data:</strong> ${pedido.data}</p>
         <p><strong>Endereço:</strong> ${pedido.local}</p>
@@ -725,7 +693,6 @@ function showAdminOrders(){
 async function atualizarStatus(codigo, novoStatus){
   let pedido = orders.find(o => o.codigo === codigo);
   if(pedido){
-    const statusAnterior = pedido.status;
     pedido.status = novoStatus;
     
     const notifIndex = notifications.findIndex(n => n.codigo === codigo);
@@ -736,31 +703,10 @@ async function atualizarStatus(codigo, novoStatus){
     addNotification();
     saveToStorage();
     
-    // ENVIA EMAIL DE ATUALIZAÇÃO PARA O CLIENTE
-    const assuntoCliente = `🔄 Atualização do Pedido #${pedido.codigo} - Delivery Express`;
-    const mensagemCliente = `
-Olá!
-
-Seu pedido foi atualizado!
-
-📦 **Detalhes do Pedido:**
-- Código: #${pedido.codigo}
-- Status Anterior: ${statusAnterior}
-- **Novo Status: ${novoStatus}**
-- Total: R$ ${pedido.total.toFixed(2)}
-- Itens: ${pedido.produtos.map(p => `${p.nome} (x${p.qtd})`).join(', ')}
-
-📍 **Endereço de entrega:**
-${pedido.local}
-
-Agradecemos pela preferência! 🍕
-
-Delivery Express
-    `;
+    // Envia email de atualização para o cliente
+    await sendEmailUpdate(pedido, novoStatus);
     
-    await sendEmailToClient(pedido, assuntoCliente, mensagemCliente);
-    
-    alert(`✅ Status do pedido #${codigo} atualizado para: ${novoStatus}\n📧 Email de atualização enviado para o cliente: ${pedido.email}`);
+    alert(`✅ Status do pedido #${codigo} atualizado para: ${novoStatus}\n📧 Email de atualização enviado para o cliente.`);
     showAdminOrders();
   }
 }
